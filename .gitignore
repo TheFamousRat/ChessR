@@ -1,0 +1,6 @@
+#Blender autosave files
+*.blend1
+*.blend11
+
+#The assets
+Chess\ sets/*
