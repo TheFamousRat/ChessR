@@ -3,8 +3,11 @@
      - Add a circular empty named "Base" for every piece. This empty must be : 
           - Named "Base" (or containing that name)
           - A child to the piece
-          - Scaled to roughly contain the piece's base bounds               - Position properly around the piece's base center
+          - Scaled to roughly contain the piece's base bounds
+          - Position properly around the piece's base center
       - Add the pieces to the collection corresponding to their type : white bishops must be added to "bishop_w", black rooks to "rook_b" etc. 
+      
+NOTE : Each piece must be represented once per set
 
 #Adding a new plateau :
     - (optional) Add the plateau in a child collection to the collection "Chess sets" and named after the set

@@ -1,5 +1,6 @@
 import bpy
 import re
+import warnings
 from math import *
 from mathutils import *
 
@@ -11,7 +12,26 @@ cellsCount = len(cellsLetters) * len(cellsNumbers)
 cellsNames = [cellLetter + cellNumber for cellLetter in cellsLetters for cellNumber in cellsNumbers]
 cellsNames.sort()
 
+PIECE_BASE_NAME = 'Base'
+
 ###Functions
+#General
+def setSelectOfObjectAndChildren(obj, selectState):
+    """
+    Sets a node and its hierarchy to a given selectState (True or False)
+    """
+    obj.select_set(selectState)
+    
+    for child in obj.children:
+        setSelectOfObjectAndChildren(child, selectState)
+
+def getChildrenWithNameContaning(parent, stringToSearch):
+    """
+    Returns all children of an objects whose names contain a user-provided string
+    """
+    return [child for child in parent.children if (re.search(stringToSearch, child.name) != None)]
+
+#Scene-specific (to move to class files later probably)
 def getPlateauCell(plateau, cellName):
     """
     Returns the empty object associated to a plateau's cell, or None if it didn't find it
@@ -19,17 +39,14 @@ def getPlateauCell(plateau, cellName):
     if not (cellName in cellsNames):
         raise Exception("Trying to get a non-existing cell name ({})".format(cellName))
     
-    childrenNames = [child.name for child in plateau.children]
+    foundCells = getChildrenWithNameContaning(plateau, cellName)
     
-    cellNameOccurencesIdx = [cellName in childName for childName in childrenNames]
-    cellNameOccurencesNum = sum(cellNameOccurencesIdx)
-    
-    if cellNameOccurencesNum == 0:
+    if len(foundCells) == 0:
         #No child has the name of the cell
         return None
-    elif cellNameOccurencesNum == 1:
+    elif len(foundCells) == 1:
         #We found exactly one cell with this name
-        return plateau.children[cellNameOccurencesIdx.index(True)]
+        return foundCells[0]
     else:
         #More than one cell with this name was found
         return None
@@ -65,6 +82,7 @@ def addCellToPlateau(plateau, cellName):
     return newCell
 
 ###Program body
+#Checking whether relevant collections are here
 if not 'plateaux' in bpy.data.collections:
     raise Exception("No plateau found, generation impossible")
 
@@ -116,4 +134,59 @@ piecesTypes = []
 for child in bpy.data.collections['piecesTypes'].children:
     if child.name in bpy.data.collections:
         piecesTypes.append(child.name)
+piecesTypes.sort()
 
+print("Found the following pieces types : {}".format(piecesTypes))
+
+#For each pieces set, get the objects representing a piece type and checking their integrity
+chessSetsPieces = {}
+
+for chessSet in bpy.data.collections['Chess sets'].children:
+    chessSetsPieces[chessSet.name] = {}
+    #Checking if the collection child is also a collection
+    if chessSet.name in bpy.data.collections:
+        #Looking for items in the collection that are registered as chess pieces
+        for chessCollectionItem in chessSet.objects:
+            #Checking if the item is also present in collections containing pieces of a certain type
+            pieceTypeCollection = list(set(chessCollectionItem.users_collection) & set(bpy.data.collections['piecesTypes'].children))
+            
+            if (len(pieceTypeCollection) > 1):
+                raise Exception("Piece '{}' belongs to more than one chess type, check if it belongs to more than one chess type collection".format(chessCollectionItem))
+            elif len(pieceTypeCollection) == 1:
+                pieceType = pieceTypeCollection[0].name
+                #Checking that the found piece type in not already represented in the set
+                if pieceType in chessSetsPieces[chessSet.name]:
+                    raise Exception("Piece type '{}' represented more than once in the set '{}'".format(pieceType, chessSet.name))
+                
+                chessSetsPieces[chessSet.name][pieceType] = chessCollectionItem
+    
+    #Checking whether the collection's found pieces have all the right pieces types
+    setPiecesTypes = list(chessSetsPieces[chessSet.name].keys())
+    setPiecesTypes.sort()
+    
+    if not (piecesTypes == setPiecesTypes):
+        warnings.warn("Set '{}' doesn't have all registered pieces types, discarding".format(chessSet.name))
+        chessSetsPieces.erase(chessSet.name)
+    else:
+        print("Chess set '{}' has all registered pieces types".format(chessSet.name))
+
+##Testing the logic to duplicate and place a piece on a set
+#mouthful.com
+def duplicateAndPlacePieceOnPlateauCell(pieceToDup, plateau, cellName):
+    bpy.ops.object.select_all(action='DESELECT')
+    setSelectOfObjectAndChildren(pieceToDup, True)
+    bpy.ops.object.duplicate()
+
+    #Select the parent in the new selection
+    duplicatedPiece = bpy.context.selected_objects[0]
+    while not (duplicatedPiece.parent == None):
+        if duplicatedPiece.parent in bpy.context.selected_objects:
+            duplicatedPiece = duplicatedPiece.parent
+
+    pieceBase = getChildrenWithNameContaning(duplicatedPiece, PIECE_BASE_NAME)[0]
+    chessBoardCell = getChildrenWithNameContaning(plateau, cellName)[0]
+
+    duplicatedPiece.location += chessBoardCell.matrix_world.to_translation() - pieceBase.matrix_world.to_translation()
+
+for cellName in cellsNames:
+    duplicateAndPlacePieceOnPlateauCell(bpy.data.objects['queen_w.001'], bpy.data.objects['Grid'], cellName)
