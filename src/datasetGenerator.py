@@ -1,8 +1,32 @@
 import bpy
 import re
+import os
+import sys
 import warnings
 from math import *
 from mathutils import *
+import numpy as np
+
+basedir = bpy.path.abspath("//")
+##Local libraries (re-)loading
+#Loading user-defined modules (subject to frequent changes and needed reloading)
+pathsToAdd = [os.path.join(basedir, "src/")]
+
+for pathToAdd in pathsToAdd:
+    sys.path.append(pathToAdd)
+
+import Board
+import utils
+
+import importlib
+importlib.reload(Board)
+importlib.reload(utils)
+
+for pathToAdd in pathsToAdd:
+    sys.path.remove(pathToAdd)
+
+import gc
+gc.collect()
 
 ###Constants
 #Plateau cells constants
@@ -15,119 +39,28 @@ cellsNames.sort()
 PIECE_BASE_NAME = 'Base'
 
 ###Functions
-#General
-def setSelectOfObjectAndChildren(obj, selectState):
-    """
-    Sets a node and its hierarchy to a given selectState (True or False)
-    """
-    obj.select_set(selectState)
-    
-    for child in obj.children:
-        setSelectOfObjectAndChildren(child, selectState)
-
-def getChildrenWithNameContaning(parent, stringToSearch):
-    """
-    Returns all children of an objects whose names contain a user-provided string
-    """
-    return [child for child in parent.children if (re.search(stringToSearch, child.name) != None)]
-
-#Scene-specific (to move to class files later probably)
-def getPlateauCell(plateau, cellName):
-    """
-    Returns the empty object associated to a plateau's cell, or None if it didn't find it
-    """
-    if not (cellName in cellsNames):
-        raise Exception("Trying to get a non-existing cell name ({})".format(cellName))
-    
-    foundCells = getChildrenWithNameContaning(plateau, cellName)
-    
-    if len(foundCells) == 0:
-        #No child has the name of the cell
-        return None
-    elif len(foundCells) == 1:
-        #We found exactly one cell with this name
-        return foundCells[0]
-    else:
-        #More than one cell with this name was found
-        return None
-
-def addCellToPlateau(plateau, cellName):
-    """
-    Creates and positions roughly the center of a cell on a given plateau
-    """
-    #Finding the absolute center position of the cell
-    plateauCenter = plateau.matrix_world.to_translation()
-    cellSize = plateau.dimensions.x / 8.0
-    upperLeftCellCenter = plateauCenter - 3.5 * Vector((cellSize, cellSize, 0.0))
-    
-    cellNumber = re.findall(r'\d+', cellName)[0]
-    cellLetter = re.findall(r'[a-zA-Z]+', cellName)[0]
-    
-    cellCoords = Vector((cellsLetters.index(cellLetter), cellsNumbers.index(cellNumber), 0.0))     
-    cellCenterPos = upperLeftCellCenter + cellSize * cellCoords
-    
-    #Creating and configuring the new cell
-    newCell = bpy.data.objects.new(cellName, None)    
-    
-    bpy.context.scene.collection.objects.link(newCell)
-    
-    newCell.empty_display_size = 0.04
-    newCell.empty_display_type = 'PLAIN_AXES'   
-    
-    newCell.parent = plateau
-    
-    newCell.matrix_parent_inverse = plateau.matrix_world.inverted()
-    newCell.location = cellCenterPos
-    
-    return newCell
 
 ###Program body
 #Checking whether relevant collections are here
 if not 'plateaux' in bpy.data.collections:
     raise Exception("No plateau found, generation impossible")
 
-allPlateaux = bpy.data.collections['plateaux'].objects
-
 #Checking that all sets are annotated for their grid positions
 print("Checking whether all the plateaux have a correct number of cells")
 
-cellIncorrectlyIndicated = False
+allPlateaux = []
+allBoardSuccessfullyInstanced = True
+for plateau in bpy.data.collections['plateaux'].objects:
+    try:
+        newBoard = Board.Board(plateau, cellsNames)
+        allPlateaux.append(newBoard)
+    except Exception as e:
+        warnings.warn("Exception on board '{}' : {}. The board was not instanciated".format(plateau.name, e))
+        allBoardSuccessfullyInstanced = False
 
-for plateau in allPlateaux:
-    childrenNames = [child.name for child in plateau.children]
-    
-    #Checking if all cells are present among the set's children
-    cellsFound = []
-    for cellName in cellsNames:
-        cellFound = getPlateauCell(plateau, cellName)
-        
-        if cellFound != None:
-            cellsFound.append(cellName)
-    
-    cellsFound.sort()
-    if cellsNames != cellsFound:
-        cellIncorrectlyIndicated = True
-        print("Incorrect cells found for the plateau '{}'. Deleting old cells and ".format(plateau.name))
-        #A different number of cells than expected was found
-        #As such, we delete all the cells and "start over"
-        
-        #Deleting all the found cells
-        for cell in cellsFound.copy():
-            bpy.data.objects.remove(cell)
-        
-        #Adding the cells now, approximately in their required position
-        plateauCenter = plateau.matrix_world.to_translation()
-        plateauDims = plateau.dimensions
-        cellSize = plateauDims.x / 8.0
-        upperLeftCellCenter = plateauCenter - 3.5 * Vector((cellSize, cellSize, 0.0))
-        
-        for cellName in cellsNames:
-            addCellToPlateau(plateau, cellName)
-    else:
-        print("Plateau '{}' ok.".format(plateau.name))
-    
-if cellIncorrectlyIndicated:
-    raise Exception("Some cells were missing, please correct with the newly added cells")
+if not allBoardSuccessfullyInstanced:
+    raise Exception("Some boards were not correctly instanciated, please check the log")
+
 
 #Pieces types
 piecesTypes = []
@@ -158,7 +91,8 @@ for chessSet in bpy.data.collections['Chess sets'].children:
                 if pieceType in chessSetsPieces[chessSet.name]:
                     raise Exception("Piece type '{}' represented more than once in the set '{}'".format(pieceType, chessSet.name))
                 
-                chessSetsPieces[chessSet.name][pieceType] = chessCollectionItem
+                piece = Board.Piece(chessCollectionItem)
+                chessSetsPieces[chessSet.name][pieceType] = piece
     
     #Checking whether the collection's found pieces have all the right pieces types
     setPiecesTypes = list(chessSetsPieces[chessSet.name].keys())
@@ -170,12 +104,14 @@ for chessSet in bpy.data.collections['Chess sets'].children:
     else:
         print("Chess set '{}' has all registered pieces types".format(chessSet.name))
 
+raise Exception("Shite")
+
 ##Testing the logic to duplicate and place a piece on a set
 #mouthful.com
-def duplicateAndPlacePieceOnPlateauCell(pieceToDup, plateau, cellName):
+def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
     bpy.ops.object.select_all(action='DESELECT')
-    setSelectOfObjectAndChildren(pieceToDup, True)
-    bpy.ops.object.duplicate()
+    utils.setSelectOfObjectAndChildren(pieceToDup, True)
+    bpy.ops.object.duplicate(linked=True)
 
     #Select the parent in the new selection
     duplicatedPiece = bpy.context.selected_objects[0]
@@ -183,10 +119,30 @@ def duplicateAndPlacePieceOnPlateauCell(pieceToDup, plateau, cellName):
         if duplicatedPiece.parent in bpy.context.selected_objects:
             duplicatedPiece = duplicatedPiece.parent
 
-    pieceBase = getChildrenWithNameContaning(duplicatedPiece, PIECE_BASE_NAME)[0]
-    chessBoardCell = getChildrenWithNameContaning(plateau, cellName)[0]
+    pieceBase = utils.getChildrenWithNameContaning(duplicatedPiece, PIECE_BASE_NAME)[0]
+    chessBoardCell = utils.getChildrenWithNameContaning(board.mesh, cellName)[0]
 
     duplicatedPiece.location += chessBoardCell.matrix_world.to_translation() - pieceBase.matrix_world.to_translation()
+    
+    #Randomness in the chess positions
+    #Random rotation
+    duplicatedPiece.rotation_euler[2] = np.random.uniform(2.0*pi)
+    
+    #Random piece offset
+    theta = np.random.uniform(2.0*pi)
+    amp = (board.cellSize/2.0) * np.random.beta(1.0, 3.0)
+    offset = amp * Vector((cos(theta), sin(theta), 0.0))
+    duplicatedPiece.location += Vector(offset)
 
 for cellName in cellsNames:
-    duplicateAndPlacePieceOnPlateauCell(bpy.data.objects['queen_w.001'], bpy.data.objects['Grid'], cellName)
+    duplicateAndPlacePieceOnBoardCell(bpy.data.objects['pawn_w'], allPlateaux[0], cellName)
+    
+#Baseline :
+#3.3Go Base
+#4.5Go Render
+#Linked
+#4.2Go Base
+#5.5Go render
+#Non-linked
+#4.2Go Base
+#5.5Go Render
