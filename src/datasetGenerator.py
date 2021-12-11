@@ -71,72 +71,48 @@ piecesTypes.sort()
 
 print("Found the following pieces types : {}".format(piecesTypes))
 
-#For each pieces set, get the objects representing a piece type and checking their integrity
-chessSetsPieces = {}
+#Create for each collection listed as a pieces set a PiecesSet instance grouping all the pieces of the set, by type
+chessSets = []
 
 for chessSet in bpy.data.collections['Chess sets'].children:
-    chessSetsPieces[chessSet.name] = {}
-    #Checking if the collection child is also a collection
-    if chessSet.name in bpy.data.collections:
-        #Looking for items in the collection that are registered as chess pieces
-        for chessCollectionItem in chessSet.objects:
-            #Checking if the item is also present in collections containing pieces of a certain type
-            pieceTypeCollection = list(set(chessCollectionItem.users_collection) & set(bpy.data.collections['piecesTypes'].children))
-            
-            if (len(pieceTypeCollection) > 1):
-                raise Exception("Piece '{}' belongs to more than one chess type, check if it belongs to more than one chess type collection".format(chessCollectionItem))
-            elif len(pieceTypeCollection) == 1:
-                pieceType = pieceTypeCollection[0].name
-                #Checking that the found piece type in not already represented in the set
-                if pieceType in chessSetsPieces[chessSet.name]:
-                    raise Exception("Piece type '{}' represented more than once in the set '{}'".format(pieceType, chessSet.name))
-                
-                piece = Board.Piece(chessCollectionItem)
-                chessSetsPieces[chessSet.name][pieceType] = piece
-    
-    #Checking whether the collection's found pieces have all the right pieces types
-    setPiecesTypes = list(chessSetsPieces[chessSet.name].keys())
-    setPiecesTypes.sort()
-    
-    if not (piecesTypes == setPiecesTypes):
-        warnings.warn("Set '{}' doesn't have all registered pieces types, discarding".format(chessSet.name))
-        chessSetsPieces.erase(chessSet.name)
-    else:
-        print("Chess set '{}' has all registered pieces types".format(chessSet.name))
+    #Checking if the set is a collection (that might then contain pieces), otherwise skipping it
+    if not chessSet.name in bpy.data.collections:
+        continue
 
-raise Exception("Shite")
+    newBoard = Board.PiecesSet(chessSet, bpy.data.collections['piecesTypes'])
+    
+    setPiecesTypes = list(newBoard.pieces)
+    setPiecesTypes.sort()
+
+    if setPiecesTypes != piecesTypes:
+        warnings.warn("Set '{}' doesn't have all registered pieces types, discarding".format(newBoard.sourceCollection.name))
+    else:
+        print("Chess set '{}' has all registered pieces types".format(newBoard.sourceCollection.name))
+        chessSets.append(newBoard)
 
 ##Testing the logic to duplicate and place a piece on a set
 #mouthful.com
 def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
-    bpy.ops.object.select_all(action='DESELECT')
-    utils.setSelectOfObjectAndChildren(pieceToDup, True)
-    bpy.ops.object.duplicate(linked=True)
+    newPiece = pieceToDup.copy()
+    newPieceMesh = newPiece.mesh
 
-    #Select the parent in the new selection
-    duplicatedPiece = bpy.context.selected_objects[0]
-    while not (duplicatedPiece.parent == None):
-        if duplicatedPiece.parent in bpy.context.selected_objects:
-            duplicatedPiece = duplicatedPiece.parent
+    chessBoardCell = board.getCell(cellName)
 
-    pieceBase = utils.getChildrenWithNameContaning(duplicatedPiece, PIECE_BASE_NAME)[0]
-    chessBoardCell = utils.getChildrenWithNameContaning(board.mesh, cellName)[0]
-
-    duplicatedPiece.location += chessBoardCell.matrix_world.to_translation() - pieceBase.matrix_world.to_translation()
+    newPieceMesh.location += chessBoardCell.matrix_world.to_translation() - newPiece.base.matrix_world.to_translation()
     
     #Randomness in the chess positions
     #Random rotation
-    duplicatedPiece.rotation_euler[2] = np.random.uniform(2.0*pi)
+    newPieceMesh.rotation_euler[2] = np.random.uniform(2.0*pi)
     
     #Random piece offset
     theta = np.random.uniform(2.0*pi)
-    amp = (board.cellSize/2.0) * np.random.beta(1.0, 3.0)
+    amp = ((board.cellSize - newPiece.baseDiameter)) * np.random.beta(1.0, 3.0)
     offset = amp * Vector((cos(theta), sin(theta), 0.0))
-    duplicatedPiece.location += Vector(offset)
+    newPieceMesh.location += Vector(offset)
 
 for cellName in cellsNames:
-    duplicateAndPlacePieceOnBoardCell(bpy.data.objects['pawn_w'], allPlateaux[0], cellName)
-    
+    duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType("bishop_b")[0], allPlateaux[0], cellName)
+
 #Baseline :
 #3.3Go Base
 #4.5Go Render

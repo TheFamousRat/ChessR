@@ -1,3 +1,5 @@
+from math import pi
+import warnings
 import bpy
 import re
 import numpy as np
@@ -122,6 +124,8 @@ class Piece:
     def __init__(self, sourceMesh_) -> None:
         """
         Creating a Piece instance from a given adequately prepared mesh
+
+        :param mesh sourceMesh_: A Blender mesh with a piece structure
         """
         self.mesh = sourceMesh_
 
@@ -135,8 +139,62 @@ class Piece:
         self.baseDiameter = np.array(self.base.empty_display_size * self.base.matrix_world.to_scale())
         self.baseDiameter[2] = 0.0
         self.baseDiameter = 2.0 * max(self.baseDiameter)
-        print(self.baseDiameter)
+    
+    def copy(self):
+        """
+        Creates and returns an identical copy of the piece
+        """
+
+        bpy.ops.object.select_all(action='DESELECT')
+        utils.setSelectOfObjectAndChildren(self.mesh, True)
+        bpy.ops.object.duplicate(linked=True)
+
+        #Select the parent in the new selection
+        duplicateSourceMesh = bpy.context.selected_objects[0]
+        while not (duplicateSourceMesh.parent == None):
+            if duplicateSourceMesh.parent in bpy.context.selected_objects:
+                duplicateSourceMesh = duplicateSourceMesh.parent
+
+        return Piece(duplicateSourceMesh)
 
 
 class PiecesSet:
-    pass
+    def getPieceOfType(self, pieceType):
+        """
+        Returns the object corresponding to a piece, looked for by its type
+        """
+        if not pieceType in self.pieces:
+            raise Exception("Looking for piece type '{}', non-existent in current set".format(pieceType))
+
+        return self.pieces[pieceType]
+
+    def __init__(self, sourceCollection_, piecesTypesCollection) -> None:
+        """
+        Creating a set of pieces
+
+        :param collection sourceCollection_: Source collection containing the pieces of the set
+        :param collection piecesTypesCollection: Collection under which are the collections grouping the pieces by types
+        """
+        self.sourceCollection = sourceCollection_
+
+        self.pieces = {}
+
+        #Looking for items in the collection that are registered as chess pieces
+        for collectionItem in self.sourceCollection.objects:
+            #Checking if the item is also present in collections containing pieces of a certain type
+            pieceTypeCollection = list(set(collectionItem.users_collection) & set(piecesTypesCollection.children))
+            
+            if (len(pieceTypeCollection) > 1):
+                raise Exception("Piece '{}' belongs to more than one chess type, check if it belongs to more than one chess type collection".format(collectionItem))
+            elif len(pieceTypeCollection) == 1:
+                pieceType = pieceTypeCollection[0].name
+                
+                try:
+                    piece = Piece(collectionItem)
+
+                    if not (pieceType in self.pieces):
+                        self.pieces[pieceType] = []
+
+                    self.pieces[pieceType].append(piece)
+                except Exception as e:
+                    warnings.warn("Could not instanciate the piece '{}' : {}".format(collectionItem.name, e))
