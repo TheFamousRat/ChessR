@@ -39,6 +39,26 @@ cellsNames.sort()
 PIECE_BASE_NAME = 'Base'
 
 ###Functions
+def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
+    """
+    Duplicating and placing a piece on a given board cell
+    """
+    newPiece = pieceToDup.copy()
+    newPieceMesh = newPiece.mesh
+
+    chessBoardCell = board.getCell(cellName)
+
+    newPieceMesh.location += chessBoardCell.matrix_world.to_translation() - newPiece.base.matrix_world.to_translation()
+    
+    #Randomness in the chess positions
+    #Random rotation
+    newPieceMesh.rotation_euler[2] = np.random.uniform(2.0*pi)
+    
+    #Random piece offset
+    theta = np.random.uniform(2.0*pi)
+    amp = ((board.cellSize - newPiece.baseDiameter)) * np.random.beta(1.0, 3.0)
+    offset = amp * Vector((cos(theta), sin(theta), 0.0))
+    newPieceMesh.location += Vector(offset)
 
 ###Program body
 #Checking whether relevant collections are here
@@ -90,29 +110,19 @@ for chessSet in bpy.data.collections['Chess sets'].children:
         print("Chess set '{}' has all registered pieces types".format(newBoard.sourceCollection.name))
         chessSets.append(newBoard)
 
-##Testing the logic to duplicate and place a piece on a set
-#mouthful.com
-def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
-    newPiece = pieceToDup.copy()
-    newPieceMesh = newPiece.mesh
+#Testing a configuration generation algorithm
+piecesTypesWithNone = piecesTypes + [None]
+noneProb = 0.5
+weights = [(1.0 - noneProb)/len(piecesTypes) for type in piecesTypes] + [noneProb]
+pickedCells = np.random.choice(piecesTypesWithNone, len(cellsNames), p=weights)
+cellsOccupancy = {cellsNames[i] : pickedCells[i] for i in range(len(cellsNames))}
 
-    chessBoardCell = board.getCell(cellName)
-
-    newPieceMesh.location += chessBoardCell.matrix_world.to_translation() - newPiece.base.matrix_world.to_translation()
+for cellName in cellsOccupancy:
+    pieceType = cellsOccupancy[cellName]
+    if pieceType != None:
+        duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType(cellsOccupancy[cellName])[0], allPlateaux[0], cellName)
     
-    #Randomness in the chess positions
-    #Random rotation
-    newPieceMesh.rotation_euler[2] = np.random.uniform(2.0*pi)
-    
-    #Random piece offset
-    theta = np.random.uniform(2.0*pi)
-    amp = ((board.cellSize - newPiece.baseDiameter)) * np.random.beta(1.0, 3.0)
-    offset = amp * Vector((cos(theta), sin(theta), 0.0))
-    newPieceMesh.location += Vector(offset)
-
-for cellName in cellsNames:
-    duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType("bishop_b")[0], allPlateaux[0], cellName)
-
+print(cellsOccupancy)
 #Baseline :
 #3.3Go Base
 #4.5Go Render
