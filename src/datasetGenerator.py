@@ -1,3 +1,4 @@
+from ctypes import util
 import bpy
 import re
 import os
@@ -30,13 +31,19 @@ gc.collect()
 
 ###Constants
 #Plateau cells constants
-cellsLetters = ["A", "B", "C", "D", "E", "F", "G", "H"]
-cellsNumbers = ["1", "2", "3", "4", "5", "6", "7", "8"]
-cellsCount = len(cellsLetters) * len(cellsNumbers)
-cellsNames = [cellLetter + cellNumber for cellLetter in cellsLetters for cellNumber in cellsNumbers]
-cellsNames.sort()
+CELLS_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+CELLS_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"]
+cellsCount = len(CELLS_LETTERS) * len(CELLS_NUMBERS)
+CELLS_NAMES = [cellLetter + cellNumber for cellLetter in CELLS_LETTERS for cellNumber in CELLS_NUMBERS]
+CELLS_NAMES.sort()
 
+# Name of the reference at the foot of the piece, giving its diameter and center position
 PIECE_BASE_NAME = 'Base'
+
+# Gathering the relevant collection, raising an exception if they don't exist
+PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
+PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
+GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
 
 ###Functions
 def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
@@ -61,18 +68,14 @@ def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
     newPieceMesh.location += Vector(offset)
 
 ###Program body
-#Checking whether relevant collections are here
-if not 'plateaux' in bpy.data.collections:
-    raise Exception("No plateau found, generation impossible")
-
 #Checking that all sets are annotated for their grid positions
 print("Checking whether all the plateaux have a correct number of cells")
 
 allPlateaux = []
 allBoardSuccessfullyInstanced = True
-for plateau in bpy.data.collections['plateaux'].objects:
+for plateau in PLATEAUX_COLLECTION.objects:
     try:
-        newBoard = Board.Board(plateau, cellsNames)
+        newBoard = Board.Board(plateau, CELLS_NAMES)
         allPlateaux.append(newBoard)
     except Exception as e:
         warnings.warn("Exception on board '{}' : {}. The board was not instanciated".format(plateau.name, e))
@@ -83,9 +86,10 @@ if not allBoardSuccessfullyInstanced:
 
 
 #Pieces types
+# Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes
 piecesTypes = []
-for child in bpy.data.collections['piecesTypes'].children:
-    if child.name in bpy.data.collections:
+for child in PIECES_TYPES_COLLECTION.children:
+    if isinstance(child, bpy.types.Collection):
         piecesTypes.append(child.name)
 piecesTypes.sort()
 
@@ -93,13 +97,12 @@ print("Found the following pieces types : {}".format(piecesTypes))
 
 #Create for each collection listed as a pieces set a PiecesSet instance grouping all the pieces of the set, by type
 chessSets = []
-
-for chessSet in bpy.data.collections['Chess sets'].children:
+for chessSet in GAME_SETS_COLLECTION.children:
     #Checking if the set is a collection (that might then contain pieces), otherwise skipping it
-    if not chessSet.name in bpy.data.collections:
+    if not isinstance(chessSet, bpy.types.Collection):
         continue
 
-    newBoard = Board.PiecesSet(chessSet, bpy.data.collections['piecesTypes'])
+    newBoard = Board.PiecesSet(chessSet, PIECES_TYPES_COLLECTION)
     
     setPiecesTypes = list(newBoard.pieces)
     setPiecesTypes.sort()
@@ -110,16 +113,20 @@ for chessSet in bpy.data.collections['Chess sets'].children:
         print("Chess set '{}' has all registered pieces types".format(newBoard.sourceCollection.name))
         chessSets.append(newBoard)
 
+if len(chessSets) == 0:
+    raise Exception("No complete game set found, aborting")
+
 #Testing a configuration generation algorithm
 piecesTypesWithNone = piecesTypes + [None]
 noneProb = 0.5
 weights = [(1.0 - noneProb)/len(piecesTypes) for type in piecesTypes] + [noneProb]
-pickedCells = np.random.choice(piecesTypesWithNone, len(cellsNames), p=weights)
-cellsOccupancy = {cellsNames[i] : pickedCells[i] for i in range(len(cellsNames))}
+pickedCells = np.random.choice(piecesTypesWithNone, len(CELLS_NAMES), p=weights)
+cellsOccupancy = {CELLS_NAMES[i] : pickedCells[i] for i in range(len(CELLS_NAMES))}
 
 for cellName in cellsOccupancy:
     pieceType = cellsOccupancy[cellName]
     if pieceType != None:
+        print(chessSets[0])
         duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType(cellsOccupancy[cellName])[0], allPlateaux[0], cellName)
     
 print(cellsOccupancy)

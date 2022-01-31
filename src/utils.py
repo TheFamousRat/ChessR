@@ -1,3 +1,4 @@
+import bpy
 import re
 import numpy as np
 
@@ -36,3 +37,15 @@ def lookAtFromPos(targetPos, lookPos, upVector):
     transform = np.concatenate([transform, np.array([[0.0, 0.0, 0.0, 1.0]])])
     
     return transform.T
+
+def checkForNonEmptyCollection(collectionName):
+    """
+    Checks whether a collection with a given name exists and has more than 0 objects
+    """
+    return (False if (not collectionName in bpy.data.collections) else (len(bpy.data.collections[collectionName].all_objects) > 0))
+
+def getNonEmptyCollection(collectionName):
+    if checkForNonEmptyCollection(collectionName):
+        return bpy.data.collections[collectionName]
+    else:
+        raise Exception("No non-empty collection named '{}' found.".format(collectionName))
