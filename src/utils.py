@@ -1,3 +1,4 @@
+import warnings
 import bpy
 import re
 import numpy as np
@@ -16,6 +17,24 @@ def getChildrenWithNameContaning(parent, stringToSearch):
     Returns all children of an objects whose names contain a user-provided string
     """
     return [child for child in parent.children if (re.search(stringToSearch, child.name) != None)]
+
+def getChildWithNameContaining(parent, stringToSearch):
+    """
+    Returns a child whose name contains a given string, and None if no such child exist/more than one exists
+    """
+    foundChildren = getChildrenWithNameContaning(parent, stringToSearch)
+        
+    if len(foundChildren) == 0:
+        #No child has the name
+        #warnings.warn("No child of '{}' with name containing '{}' found.".format(parent.name, stringToSearch))
+        return None
+    elif len(foundChildren) == 1:
+        #We found exactly one child with this name
+        return foundChildren[0]
+    else:
+        #More than one child with this name was found
+        #warnings.warn("More than one child of '{}' with name containing '{}' found.".format(parent.name, stringToSearch))
+        return None
 
 def duplicateObjectAndHierarchy(obj, linked=False):
     # Selecting only the object and its hiearchy, and duplicating it

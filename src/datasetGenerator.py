@@ -51,26 +51,7 @@ PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
 GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
 
 ### Functions
-def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
-    """
-    Duplicating and placing a piece on a given board cell
-    """
-    newPiece = pieceToDup.duplicate()
-    newPieceMesh = newPiece.mesh
-
-    chessBoardCell = board.getCell(cellName)
-
-    newPieceMesh.location += chessBoardCell.matrix_world.to_translation() - newPiece.base.matrix_world.to_translation()
-    
-    #Randomness in the chess positions
-    #Random rotation
-    newPieceMesh.rotation_euler[2] = np.random.uniform(2.0*pi)
-    
-    #Random piece offset
-    theta = np.random.uniform(2.0*pi)
-    amp = ((board.cellSize - newPiece.baseDiameter)) * np.random.beta(1.0, 3.0)
-    offset = amp * Vector((cos(theta), sin(theta), 0.0))
-    newPieceMesh.location += Vector(offset)
+#...
 
 ### Program body
 ## Loading necessary data (plateaux, sets, pieces types etc.)
@@ -83,12 +64,13 @@ for plateau in PLATEAUX_COLLECTION.objects:
     try:
         newBoard = Board.Board(plateau, CELLS_NAMES)
         allPlateaux.append(newBoard)
+        print("Instanciated board '{}' successfully".format(plateau.name))
     except Exception as e:
-        warnings.warn("Exception on board '{}' : {}. The board was not instanciated".format(plateau.name, e))
+        warnings.warn("Exception on board '{}' :\n ''{}''\nThe board was not instanciated".format(plateau.name, e))
         allBoardSuccessfullyInstanced = False
 
 if not allBoardSuccessfullyInstanced:
-    raise Exception("Some boards were not correctly instanciated, please check the log")
+    raise Exception("Some boards were not correctly instanciated, please check the log.")
 
 # Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes
 print("Loading pieces types")
@@ -102,6 +84,9 @@ piecesTypes.sort()
 print("Found the following pieces types : {}".format(piecesTypes))
 
 # Instancing PiecesSet, which provides an interface for accessing with individual pieces in the same set (that is, pieces that share the same style)
+print("Instanciating pieces sets")
+allSetsSuccessfullyInstanced = True
+
 chessSets = []
 for chessSet in GAME_SETS_COLLECTION.children:
     #Checking if the set is a collection (that might then contain pieces), otherwise skipping it
@@ -115,19 +100,14 @@ for chessSet in GAME_SETS_COLLECTION.children:
 
     if setPiecesTypes != piecesTypes:
         warnings.warn("Set '{}' doesn't have all registered pieces types, discarding".format(newBoard.sourceCollection.name))
+        allSetsSuccessfullyInstanced = False
     else:
         print("Chess set '{}' has all registered pieces types".format(newBoard.sourceCollection.name))
         chessSets.append(newBoard)
 
-if len(chessSets) == 0:
-    raise Exception("No complete game set found, aborting")
+if not allSetsSuccessfullyInstanced:
+    raise Exception("Some pieces sets were not correctly instanciated, please check the log.")
 
 ## Generating scenarios
 imagesGenerator = BoardImagesGenerator()
-scenario = imagesGenerator.generateScenario(piecesTypes, CELLS_NAMES)
-print(scenario)
-
-for cellName in scenario:
-    pieceType = scenario[cellName]
-    if pieceType != None:
-        duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType(scenario[cellName])[0], allPlateaux[0], cellName)
+imagesGenerator.applyRandomScenarioToBoard(allPlateaux[0], chessSets[0])

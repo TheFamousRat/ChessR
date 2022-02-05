@@ -1,4 +1,5 @@
 import numpy as np
+from mathutils import *
 
 class BoardImagesGenerator:
     """
@@ -9,7 +10,7 @@ class BoardImagesGenerator:
         self.imagesHeight = 640 
         self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a scenario
 
-    def generateScenario(self, piecesTypes, cellsNames):
+    def generateRandomScenario(self, piecesTypes, cellsNames):
         """
         Generates a random scenario for the board, that is assigns every cell to a randomly selected piece or to nothing
         """
@@ -22,3 +23,34 @@ class BoardImagesGenerator:
         cellsOccupancy = {cellsNames[i] : pickedCells[i] for i in range(len(cellsNames))}
 
         return cellsOccupancy
+    
+    def duplicateAndPlacePieceOnBoardCell(self, pieceToDup, board, cellName):
+        """
+        Duplicating and placing a piece on a given board cell
+        """
+        newPiece = pieceToDup.duplicate()
+        newPieceMesh = newPiece.mesh
+
+        chessBoardCell = board.getCellObj(cellName)
+
+        newPieceMesh.location += chessBoardCell.matrix_world.to_translation() - newPiece.base.matrix_world.to_translation()
+        
+        #Randomness in the chess positions
+        #Random rotation
+        newPieceMesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
+        
+        #Random piece offset
+        theta = np.random.uniform(2.0*np.pi)
+        amp = ((board.cellSize - newPiece.baseDiameter)) * np.random.beta(1.0, 3.0)
+        offset = amp * Vector((np.cos(theta), np.sin(theta), 0.0))
+        newPieceMesh.location += Vector(offset)
+
+    def applyScenarioToBoard(self, scenario, board, piecesSet):
+        for cellName in scenario:
+            pieceType = scenario[cellName]
+            if pieceType != None:
+                self.duplicateAndPlacePieceOnBoardCell(piecesSet.getPieceOfType(scenario[cellName])[0], board, cellName)
+
+    def applyRandomScenarioToBoard(self, board, piecesSet):
+        print(piecesSet)
+        return self.applyScenarioToBoard(self.generateRandomScenario(piecesSet.getStoredPiecesTypes(), board.cellsNames), board, piecesSet)

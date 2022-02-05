@@ -9,41 +9,67 @@ from mathutils import *
 import utils
 
 class Board:
-    def getCell(self, cellName):
+    CENTER_OBJ_NAME = "Center"
+    BASE_OBJ_NAME = "Base"
+
+    def getCellObj(self, cellName):
         """
         Returns the empty object associated to a plateau's cell, or None if it didn't find it
         """
         if not (cellName in self.cellsNames):
             raise Exception("Trying to get a non-existing cell name ({})".format(cellName))
         
-        foundCells = utils.getChildrenWithNameContaning(self.mesh, cellName)
-        
-        if len(foundCells) == 0:
-            #No child has the name of the cell
-            return None
-        elif len(foundCells) == 1:
-            #We found exactly one cell with this name
-            return foundCells[0]
-        else:
-            #More than one cell with this name was found
-            return None
+        foundChild = utils.getChildWithNameContaining(self.mesh, cellName)
 
-    def addCell(self, cellName):
+        if foundChild == None:
+            raise Exception("Trying to get non-instanciated cell {} on board {}".format(cellName, self.mesh.name))
+
+        return foundChild
+
+    def getCenterObj(self):
         """
-        Creates and positions roughly the center of a cell on a given plateau
+        Returns the user-defined center of the board, and raises an error if it doesn't exist
         """
-        #Finding the absolute center position of the cell
-        plateauCenter = self.mesh.matrix_world.to_translation()
-        cellSize = self.mesh.dimensions.x / 8.0
-        upperLeftCellCenter = plateauCenter - 3.5 * Vector((cellSize, cellSize, 0.0))
+        foundChild = utils.getChildWithNameContaining(self.mesh, Board.CENTER_OBJ_NAME)
+
+        if foundChild == None:
+            raise Exception("No center found for board '{}', please create and position a child object with the name '{}' appropriately".format(self.mesh.name, Board.CENTER_OBJ_NAME))
         
+        return foundChild
+
+    def getBaseObj(self):
+        """
+        Returns the user-defined base of the board, and raises an error if it doesn't exist
+        """
+        foundChild = utils.getChildWithNameContaining(self.mesh, Board.BASE_OBJ_NAME)
+
+        if foundChild == None:
+            raise Exception("No base found for board '{}', please create and position a child object with the name '{}' appropriately".format(self.mesh.name, Board.BASE_OBJ_NAME))
+        
+        return foundChild
+
+    def generateNewCell(self, cellName):
+        """
+        Creates a cell center object and positions it approximately on the Board
+        Useful when dealing with a new unannotated Board to place the cells' locations without manually creating them
+        """
+        # Finding the absolute center position of the board
+        plateauCenter = self.getCenterObj().matrix_world.to_location()
+        
+        # Delimiting the dimensions of a cell
+        boardDims = (len(self.cellsLetters), len(self.cellsNumbers))
+        cellSize = Vector((self.mesh.dimensions.x / boardDims[0], self.mesh.dimensions.y / boardDims[1], 0.0))
+        upperLeftCellCenter = plateauCenter - Vector((cellSize.x * ((boardDims[0]/2.0) - 0.5), cellSize.y * ((boardDims[1]/2.0) - 0.5), 0.0))
+        
+        # Determining the characteristics of the cell
         cellNumber = re.findall(r'\d+', cellName)[0]
         cellLetter = re.findall(r'[a-zA-Z]+', cellName)[0]
         
+        # Determining the real world coords of the cell's center
         cellCoords = Vector((self.cellsLetters.index(cellLetter), self.cellsNumbers.index(cellNumber), 0.0))     
-        cellCenterPos = upperLeftCellCenter + cellSize * cellCoords
+        cellCenterPos = upperLeftCellCenter + Vector((cellSize.x * cellCoords.x, cellSize.y * cellCoords.y, 0.0))
         
-        #Creating and configuring the new cell
+        # Creating and configuring the new cell
         newCell = bpy.data.objects.new(cellName, None)    
         
         bpy.context.scene.collection.objects.link(newCell)
@@ -57,6 +83,16 @@ class Board:
         newCell.location = cellCenterPos
         
         return newCell
+
+    def regenerateCells(self):
+        #Deleting all the found cells
+        for cellName in self.cellsLetters:
+            for cell in utils.getChildrenWithNameContaning(self.mesh, cellName):
+                bpy.data.objects.remove(cell)
+        
+        #Adding the cells now, approximately in their required position
+        for cellName in self.cellsNames:
+            self.generateNewCell(cellName)
 
     def __init__(self, sourceMesh_, cellsNames_) -> None:
         """
@@ -75,32 +111,28 @@ class Board:
         self.cellsLetters.sort()
         self.cellsNumbers.sort()
 
-        childrenNames = [child.name for child in self.mesh.children]
-    
-        #Checking if all cells are present among the set's children
-        cellsFound = [cellName for cellName in self.cellsNames if (self.getCell(cellName) != None)]
-        
-        cellsFound.sort()
-        if self.cellsNames != cellsFound:
-            print("Incorrect cells found for the board '{}'. Deleting old cells and adding new placeholders.".format(self.mesh.name))
+        self.getBaseObj()
+        self.getCenterObj()
+
+        try:
+            # Checking if all cells are present among the set's children
+            for cellName in self.cellsNames:
+                print(cellName)
+                self.getCellObj(cellName)
+        except Exception as e:
+            print(e)
+            print("Incomplete cells annotions found for board '{}'.".format(self.mesh.name))
             #A different number of cells than expected was found
             #As such, we delete all the cells and "start over"
             
-            #Deleting all the found cells
-            for cellName in self.cellsLetters:
-                for cell in utils.getChildrenWithNameContaning(self.mesh, cellName):
-                    bpy.data.objects.remove(cell)
-            
-            #Adding the cells now, approximately in their required position
-            for cellName in self.cellsNames:
-                self.addCell(cellName)
+            self.regenerateCells()
 
-            raise Exception("Board initialization incomplete due to inadequate cells structure.")
+            raise Exception("Missing cells detected for board '{}'." +
+            "Old cells have been deleted and new have regenerated, but their position will likely have to be checked by hand")
 
-        #Getting the size of a cell
-        #For now supporting only square cells
-        cellA1 = self.getCell("A1")
-        cellB2 = self.getCell("B2")
+        #Getting the size of a cell. Only supports square cells for the time being.
+        cellA1 = self.getCellObj("A1")
+        cellB2 = self.getCellObj("B2")
         self.cellSize = np.linalg.norm(np.array(cellA1.matrix_world.to_translation() - cellB2.matrix_world.to_translation())) / np.sqrt(2.0)
 
         print("Board '{}' ok.".format(self.mesh.name))
@@ -118,17 +150,7 @@ class Piece:
     Class representing a board game piece
     """
     def getBase(self):
-        foundCells = utils.getChildrenWithNameContaning(self.mesh, "Base")
-        
-        if len(foundCells) == 0:
-            #No child has the name of the cell
-            return None
-        elif len(foundCells) == 1:
-            #We found exactly one cell with this name
-            return foundCells[0]
-        else:
-            #More than one cell with this name was found
-            return None
+        return utils.getChildWithNameContaining(self.mesh, "Base")
 
     def __init__(self, sourceMesh_) -> None:
         """
@@ -166,6 +188,12 @@ class PiecesSet:
             raise Exception("Looking for piece type '{}', non-existent in current set".format(pieceType))
 
         return self.pieces[pieceType]
+
+    def getStoredPiecesTypes(self):
+        """
+        Returns the unique types of the pieces contained in the set
+        """
+        return list(set(self.pieces.keys()))
 
     def __init__(self, sourceCollection_, piecesTypesCollection) -> None:
         """
