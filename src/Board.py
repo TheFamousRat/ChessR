@@ -1,3 +1,4 @@
+from ctypes import util
 from math import pi
 import warnings
 import bpy
@@ -103,6 +104,14 @@ class Board:
         self.cellSize = np.linalg.norm(np.array(cellA1.matrix_world.to_translation() - cellB2.matrix_world.to_translation())) / np.sqrt(2.0)
 
         print("Board '{}' ok.".format(self.mesh.name))
+    
+    def duplicate(self):
+        """
+        Duplicates the mesh from which the Board object was extracted, and returns a Board created from this duplicated mesh
+        """
+        dupMesh = utils.duplicateObjectAndHierarchy(self.mesh, True)
+
+        return Board(dupMesh, self.cellsNames)
 
 class Piece:
     """
@@ -140,22 +149,13 @@ class Piece:
         self.baseDiameter[2] = 0.0
         self.baseDiameter = 2.0 * max(self.baseDiameter)
     
-    def copy(self):
+    def duplicate(self):
         """
-        Creates and returns an identical copy of the piece
+        Duplicates the mesh from which the Piece object was extracted, and returns a Piece created from this duplicated mesh
         """
+        dupMesh = utils.duplicateObjectAndHierarchy(self.mesh, linked=True)
 
-        bpy.ops.object.select_all(action='DESELECT')
-        utils.setSelectOfObjectAndChildren(self.mesh, True)
-        bpy.ops.object.duplicate(linked=True)
-
-        #Select the parent in the new selection
-        duplicateSourceMesh = bpy.context.selected_objects[0]
-        while not (duplicateSourceMesh.parent == None):
-            if duplicateSourceMesh.parent in bpy.context.selected_objects:
-                duplicateSourceMesh = duplicateSourceMesh.parent
-
-        return Piece(duplicateSourceMesh)
+        return Piece(dupMesh)
 
 
 class PiecesSet:

@@ -50,7 +50,7 @@ def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
     """
     Duplicating and placing a piece on a given board cell
     """
-    newPiece = pieceToDup.copy()
+    newPiece = pieceToDup.duplicate()
     newPieceMesh = newPiece.mesh
 
     chessBoardCell = board.getCell(cellName)
@@ -84,6 +84,9 @@ for plateau in PLATEAUX_COLLECTION.objects:
 if not allBoardSuccessfullyInstanced:
     raise Exception("Some boards were not correctly instanciated, please check the log")
 
+
+allPlateaux[0].duplicate()
+raise Exception("Ass")
 
 #Pieces types
 # Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes

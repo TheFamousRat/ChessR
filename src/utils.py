@@ -17,6 +17,28 @@ def getChildrenWithNameContaning(parent, stringToSearch):
     """
     return [child for child in parent.children if (re.search(stringToSearch, child.name) != None)]
 
+def duplicateObjectAndHierarchy(obj, linked=False):
+    # Selecting only the object and its hiearchy, and duplicating it
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.select_hierarchy(direction='CHILD', extend=True)
+    bpy.ops.object.duplicate(linked=True)
+
+    # Returning the duplicate root object, that is the one sharing the same data as the original root object
+    dupObj = None
+    dupObjsData = [ob.data for ob in bpy.context.selected_objects]
+    if not obj.data in dupObjsData:
+        raise Exception("For some reason, no duplicate object carries the original data. Check if objects were properly selected or if the duplication was set to 'Linked'.")
+
+    dupObj = bpy.context.selected_objects[dupObjsData.index(obj.data)]
+
+    # If the user specified for the duplicate not to be linked, we make its properties local
+    if not linked:
+        bpy.ops.object.make_single_user(object=True, obdata=True, material=True, animation=True, obdata_animation=True)
+
+    return dupObj
+
 def lookAtFromPos(targetPos, lookPos, upVector):
     """
     Returns the transform to apply to an object so that it looks towards targetPos, from a given position lookPos and with a given up vector upVector
@@ -33,7 +55,7 @@ def lookAtFromPos(targetPos, lookPos, upVector):
     xAxis = np.cross(zAxis, yAxis)
     xAxis = xAxis / np.linalg.norm(xAxis)
 
-    transform = np.concatenate([yAxis, -xAxis, -zAxis, camPos]).reshape((4, 3)).T
+    transform = np.concatenate([yAxis, -xAxis, -zAxis, lookPos]).reshape((4, 3)).T
     transform = np.concatenate([transform, np.array([[0.0, 0.0, 0.0, 1.0]])])
     
     return transform.T
