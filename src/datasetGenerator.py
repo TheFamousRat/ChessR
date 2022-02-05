@@ -110,4 +110,22 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 imagesGenerator = BoardImagesGenerator()
-imagesGenerator.applyRandomScenarioToBoard(allPlateaux[0], chessSets[0])
+
+plateauPos = Vector((0,2,0))
+
+# Setting board pos
+newPlateau = allPlateaux[0].duplicate()
+newPlateau.setBasePosAt(plateauPos)
+newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
+
+# Setting pieces randomly
+imagesGenerator.applyRandomScenarioToBoard(newPlateau, chessSets[0])
+
+# Positioning the active Camera randomly
+cam = bpy.context.scene.camera
+cam.matrix_world = utils.lookAtFromPos(plateauPos, plateauPos + Vector((0.0, 0.0, 1.0)), Vector((0.0, 0.0, 1.0)))
+
+# Cheeky rendering
+bpy.ops.render.render()#'INVOKE_DEFAULT')
+
+newPlateau.delete(True)

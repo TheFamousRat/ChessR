@@ -12,6 +12,15 @@ def setSelectOfObjectAndChildren(obj, selectState):
     for child in obj.children:
         setSelectOfObjectAndChildren(child, selectState)
 
+def setNewParent(obj, newParent, keep_transform=False):
+    bpy.ops.object.select_all(action='DESELECT')
+
+    obj.select_set(True)
+    newParent.select_set(True)
+    bpy.context.view_layer.objects.active = newParent
+
+    bpy.ops.object.parent_set(keep_transform=keep_transform)
+
 def getChildrenWithNameContaning(parent, stringToSearch):
     """
     Returns all children of an objects whose names contain a user-provided string
@@ -36,12 +45,20 @@ def getChildWithNameContaining(parent, stringToSearch):
         #warnings.warn("More than one child of '{}' with name containing '{}' found.".format(parent.name, stringToSearch))
         return None
 
-def duplicateObjectAndHierarchy(obj, linked=False):
-    # Selecting only the object and its hiearchy, and duplicating it
-    bpy.ops.object.select_all(action='DESELECT')
+def selectObjAndHierarchy(obj):
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
     bpy.ops.object.select_hierarchy(direction='CHILD', extend=True)
+
+def deleteObjAndHierarchy(obj):
+    bpy.ops.object.select_all(action='DESELECT')
+    selectObjAndHierarchy(obj)
+    bpy.ops.object.delete()
+
+def duplicateObjectAndHierarchy(obj, linked=False):
+    # Selecting only the object and its hiearchy, and duplicating it
+    bpy.ops.object.select_all(action='DESELECT')
+    selectObjAndHierarchy(obj)
     bpy.ops.object.duplicate(linked=True)
 
     # Returning the duplicate root object, that is the one sharing the same data as the original root object
@@ -68,8 +85,14 @@ def lookAtFromPos(targetPos, lookPos, upVector):
     zAxis = targetPos - lookPos
     zAxis = zAxis / np.linalg.norm(zAxis)
 
-    yAxis = np.cross(zAxis, np.array(upVector))
-    yAxis = yAxis / np.linalg.norm(yAxis)
+    yAxis = None
+    usedUpVec = np.array(upVector)
+    if abs(np.dot(zAxis, usedUpVec)) == 1.0:
+        #If the zAxis and up vector share the same direction, we find an arbitrary yAxis orthogonal to zAxis
+        yAxis = np.array([zAxis[1], -zAxis[0], 0.0]) if (zAxis[1] != 0.0 or zAxis[0] != 0.0) else np.array([zAxis[2], 0.0, -zAxis[0]])
+    else:
+        yAxis = np.cross(zAxis, usedUpVec)
+        yAxis = yAxis / np.linalg.norm(yAxis)
 
     xAxis = np.cross(zAxis, yAxis)
     xAxis = xAxis / np.linalg.norm(xAxis)

@@ -1,5 +1,6 @@
 import numpy as np
 from mathutils import *
+import utils
 
 class BoardImagesGenerator:
     """
@@ -26,7 +27,7 @@ class BoardImagesGenerator:
     
     def duplicateAndPlacePieceOnBoardCell(self, pieceToDup, board, cellName):
         """
-        Duplicating and placing a piece on a given board cell
+        Duplicating and placing a piece on a given board cell.
         """
         # Duplicating the piece and placing it on the appropriate cell center
         newPiece = pieceToDup.duplicate()
@@ -46,6 +47,8 @@ class BoardImagesGenerator:
         offset = amp * Vector((np.cos(theta), np.sin(theta), 0.0))
         newPieceMesh.location += Vector(offset)
 
+        board.setCellPiece(cellName, newPiece)
+
     def applyScenarioToBoard(self, scenario, board, piecesSet):
         """
         Applies a given scenario to a board with a specific game set, by placing all the pieces specified by the scenario on their appropriate cells
@@ -54,6 +57,8 @@ class BoardImagesGenerator:
             pieceType = scenario[cellName]
             if pieceType != None:
                 self.duplicateAndPlacePieceOnBoardCell(piecesSet.getPieceOfType(scenario[cellName])[0], board, cellName)
+
+        return scenario
 
     def applyRandomScenarioToBoard(self, board, piecesSet):
         """

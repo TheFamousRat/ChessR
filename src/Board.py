@@ -12,6 +12,18 @@ class Board:
     CENTER_OBJ_NAME = "Center"
     BASE_OBJ_NAME = "Base"
 
+    def delete(self, deleteAddedPieces):
+        if deleteAddedPieces:
+            for cellName in self.cellsPieces:
+                self.cellsPieces[cellName].delete()
+            self.cellsPieces = {}
+        utils.deleteObjAndHierarchy(self.mesh)
+
+    def setCellPiece(self, cellName, piece):
+        """
+        Assigns a piece to a given cell
+        """
+        self.cellsPieces[cellName] = piece
 
     def setBasePosAt(self, newPos):
         """
@@ -136,6 +148,8 @@ class Board:
 
             raise Exception("Missing cells detected for board '{}'." +
             "Old cells have been deleted and new have regenerated, but their position will likely have to be checked by hand")
+        
+        self.cellsPieces = {}
 
         #Getting the size of a cell. Only supports square cells for the time being.
         cellA1 = self.getCellObj("A1")
@@ -156,6 +170,9 @@ class Piece:
     """
     Class representing a board game piece
     """
+    def delete(self):
+        utils.deleteObjAndHierarchy(self.mesh)
+
     def getBase(self):
         return utils.getChildWithNameContaining(self.mesh, "Base")
 
