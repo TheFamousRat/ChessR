@@ -12,6 +12,15 @@ class Board:
     CENTER_OBJ_NAME = "Center"
     BASE_OBJ_NAME = "Base"
 
+
+    def setBasePosAt(self, newPos):
+        """
+        Moves the board and its children so that the base is at a given position (in world coords)
+        """
+        baseObj = self.getBaseObj()
+
+        self.mesh.matrix_world.translation += newPos - baseObj.matrix_world.translation
+
     def getCellObj(self, cellName):
         """
         Returns the empty object associated to a plateau's cell, or None if it didn't find it
@@ -117,10 +126,8 @@ class Board:
         try:
             # Checking if all cells are present among the set's children
             for cellName in self.cellsNames:
-                print(cellName)
                 self.getCellObj(cellName)
         except Exception as e:
-            print(e)
             print("Incomplete cells annotions found for board '{}'.".format(self.mesh.name))
             #A different number of cells than expected was found
             #As such, we delete all the cells and "start over"
