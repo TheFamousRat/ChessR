@@ -157,7 +157,6 @@ class Piece:
 
         return Piece(dupMesh)
 
-
 class PiecesSet:
     def getPieceOfType(self, pieceType):
         """

@@ -1,3 +1,4 @@
+### Modules
 from ctypes import util
 import bpy
 import re
@@ -9,19 +10,23 @@ from mathutils import *
 import numpy as np
 
 basedir = bpy.path.abspath("//")
-##Local libraries (re-)loading
-#Loading user-defined modules (subject to frequent changes and needed reloading)
+## Local libraries (re-)loading
+# Loading user-defined modules (subject to frequent changes and needed reloading)
 pathsToAdd = [os.path.join(basedir, "src/")]
 
 for pathToAdd in pathsToAdd:
     sys.path.append(pathToAdd)
 
-import Board
 import utils
+import Board
+import BoardImagesGenerator
 
 import importlib
-importlib.reload(Board)
 importlib.reload(utils)
+importlib.reload(Board)
+importlib.reload(BoardImagesGenerator)
+
+from BoardImagesGenerator import BoardImagesGenerator
 
 for pathToAdd in pathsToAdd:
     sys.path.remove(pathToAdd)
@@ -29,8 +34,8 @@ for pathToAdd in pathsToAdd:
 import gc
 gc.collect()
 
-###Constants
-#Plateau cells constants
+### Constants
+# Plateau cells constants
 CELLS_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 CELLS_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"]
 cellsCount = len(CELLS_LETTERS) * len(CELLS_NUMBERS)
@@ -45,7 +50,7 @@ PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
 PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
 GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
 
-###Functions
+### Functions
 def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
     """
     Duplicating and placing a piece on a given board cell
@@ -67,9 +72,10 @@ def duplicateAndPlacePieceOnBoardCell(pieceToDup, board, cellName):
     offset = amp * Vector((cos(theta), sin(theta), 0.0))
     newPieceMesh.location += Vector(offset)
 
-###Program body
-#Checking that all sets are annotated for their grid positions
-print("Checking whether all the plateaux have a correct number of cells")
+### Program body
+## Loading necessary data (plateaux, sets, pieces types etc.)
+# Loading plateaux
+print("Instanciating boards")
 
 allPlateaux = []
 allBoardSuccessfullyInstanced = True
@@ -84,12 +90,9 @@ for plateau in PLATEAUX_COLLECTION.objects:
 if not allBoardSuccessfullyInstanced:
     raise Exception("Some boards were not correctly instanciated, please check the log")
 
-
-allPlateaux[0].duplicate()
-raise Exception("Ass")
-
-#Pieces types
 # Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes
+print("Loading pieces types")
+
 piecesTypes = []
 for child in PIECES_TYPES_COLLECTION.children:
     if isinstance(child, bpy.types.Collection):
@@ -98,7 +101,7 @@ piecesTypes.sort()
 
 print("Found the following pieces types : {}".format(piecesTypes))
 
-#Create for each collection listed as a pieces set a PiecesSet instance grouping all the pieces of the set, by type
+# Instancing PiecesSet, which provides an interface for accessing with individual pieces in the same set (that is, pieces that share the same style)
 chessSets = []
 for chessSet in GAME_SETS_COLLECTION.children:
     #Checking if the set is a collection (that might then contain pieces), otherwise skipping it
@@ -119,26 +122,12 @@ for chessSet in GAME_SETS_COLLECTION.children:
 if len(chessSets) == 0:
     raise Exception("No complete game set found, aborting")
 
-#Testing a configuration generation algorithm
-piecesTypesWithNone = piecesTypes + [None]
-noneProb = 0.5
-weights = [(1.0 - noneProb)/len(piecesTypes) for type in piecesTypes] + [noneProb]
-pickedCells = np.random.choice(piecesTypesWithNone, len(CELLS_NAMES), p=weights)
-cellsOccupancy = {CELLS_NAMES[i] : pickedCells[i] for i in range(len(CELLS_NAMES))}
+## Generating scenarios
+imagesGenerator = BoardImagesGenerator()
+scenario = imagesGenerator.generateScenario(piecesTypes, CELLS_NAMES)
+print(scenario)
 
-for cellName in cellsOccupancy:
-    pieceType = cellsOccupancy[cellName]
+for cellName in scenario:
+    pieceType = scenario[cellName]
     if pieceType != None:
-        print(chessSets[0])
-        duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType(cellsOccupancy[cellName])[0], allPlateaux[0], cellName)
-    
-print(cellsOccupancy)
-#Baseline :
-#3.3Go Base
-#4.5Go Render
-#Linked
-#4.2Go Base
-#5.5Go render
-#Non-linked
-#4.2Go Base
-#5.5Go Render
+        duplicateAndPlacePieceOnBoardCell(chessSets[0].getPieceOfType(scenario[cellName])[0], allPlateaux[0], cellName)
