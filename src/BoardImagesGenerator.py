@@ -4,22 +4,22 @@ import utils
 
 class BoardImagesGenerator:
     """
-    Class focusing on randomly generating and rendering plausible images of Board game scenarios
+    Class focusing on randomly generating and rendering plausible images of Board game configurations
     """
     def __init__(self) -> None:
         self.imagesWidth = 640 #Width and height of output images
         self.imagesHeight = 640 
-        self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a scenario
+        self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a configuration
 
-    def generateRandomScenario(self, piecesTypes, cellsNames):
+    def generateRandomConfiguration(self, piecesTypes, cellsNames):
         """
-        Generates a random scenario for the board, that is assigns every cell to a randomly selected piece or to nothing
+        Generates a random configuration for the board, that is assigns every cell to a randomly selected piece or to nothing
         """
         # Possible outputs for each cell : a piece type, or None
         piecesTypesWithNone = piecesTypes + [None]
         # Weights associated with the possible outputs
         weights = ([(1.0 - self.emptyCellProb)/len(piecesTypes)] * len(piecesTypes)) + [self.emptyCellProb]
-        # Picking random values, and associating them with their cell to create a scenario
+        # Picking random values, and associating them with their cell to create a configuration
         pickedCells = np.random.choice(piecesTypesWithNone, len(cellsNames), p=weights)
         cellsOccupancy = {cellsNames[i] : pickedCells[i] for i in range(len(cellsNames))}
 
@@ -49,19 +49,19 @@ class BoardImagesGenerator:
 
         board.setCellPiece(cellName, newPiece)
 
-    def applyScenarioToBoard(self, scenario, board, piecesSet):
+    def applyConfigurationToBoard(self, configuration, board, piecesSet):
         """
-        Applies a given scenario to a board with a specific game set, by placing all the pieces specified by the scenario on their appropriate cells
+        Applies a given configuration to a board with a specific game set, by placing all the pieces specified by the configuration on their appropriate cells
         """
-        for cellName in scenario:
-            pieceType = scenario[cellName]
+        for cellName in configuration:
+            pieceType = configuration[cellName]
             if pieceType != None:
-                self.duplicateAndPlacePieceOnBoardCell(piecesSet.getPieceOfType(scenario[cellName])[0], board, cellName)
+                self.duplicateAndPlacePieceOnBoardCell(piecesSet.getPieceOfType(configuration[cellName])[0], board, cellName)
 
-        return scenario
+        return configuration
 
-    def applyRandomScenarioToBoard(self, board, piecesSet):
+    def applyRandomConfigurationToBoard(self, board, piecesSet):
         """
-        Same as 'applyScenarioToBoard', only uses a random scenario generated beforehand
+        Same as 'applyConfigurationToBoard', only uses a random configuration generated beforehand
         """
-        return self.applyScenarioToBoard(self.generateRandomScenario(piecesSet.getStoredPiecesTypes(), board.cellsNames), board, piecesSet)
+        return self.applyConfigurationToBoard(self.generateRandomConfiguration(piecesSet.getStoredPiecesTypes(), board.cellsNames), board, piecesSet)

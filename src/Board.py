@@ -9,8 +9,17 @@ from mathutils import *
 import utils
 
 class Board:
+    CORNERS_OBJ_NAMES = ["TL", "TR", "BL", "BR"]
+    CORNERS_OBJ_DISPLAY = 'SPHERE'
+    CORNERS_OBJ_DISPLAY_SCALE = 0.01
+
     CENTER_OBJ_NAME = "Center"
+    CENTER_OBJ_DISPLAY = 'CUBE'
+    CENTER_OBJ_DISPLAY_SCALE = 0.004
+
     BASE_OBJ_NAME = "Base"
+    BASE_OBJ_DISPLAY = 'CUBE'
+    BASE_OBJ_DISPLAY_SCALE = 0.004
 
     def delete(self, deleteAddedPieces):
         if deleteAddedPieces:
@@ -18,7 +27,7 @@ class Board:
                 self.cellsPieces[cellName].delete()
             self.cellsPieces = {}
         utils.deleteObjAndHierarchy(self.mesh)
-
+    
     def setCellPiece(self, cellName, piece):
         """
         Assigns a piece to a given cell
@@ -45,6 +54,19 @@ class Board:
         if foundChild == None:
             raise Exception("Trying to get non-instanciated cell {} on board {}".format(cellName, self.mesh.name))
 
+        return foundChild
+
+    def getCornerObj(self, cornerNum):
+        """
+        Returns the empty object associated with one of the board's corner
+        """
+        objName = Board.CORNERS_OBJ_NAMES[cornerNum]
+
+        foundChild = utils.getChildWithNameContaining(self.mesh, objName)
+
+        if foundChild == None:
+            raise Exception("Missing corner found for board '{}', please ensure four children of the board with names '{}' exist".format(self.mesh.name, Board.CORNERS_OBJ_NAMES))
+        
         return foundChild
 
     def getCenterObj(self):
@@ -91,12 +113,12 @@ class Board:
         cellCenterPos = upperLeftCellCenter + Vector((cellSize.x * cellCoords.x, cellSize.y * cellCoords.y, 0.0))
         
         # Creating and configuring the new cell
-        newCell = bpy.data.objects.new(cellName, None)    
+        newCell = bpy.data.objects.new(cellName, None)
         
         bpy.context.scene.collection.objects.link(newCell)
-        
+
         newCell.empty_display_size = 0.04
-        newCell.empty_display_type = 'PLAIN_AXES'   
+        newCell.empty_display_type = 'PLAIN_AXES'
         
         newCell.parent = self.mesh
         
@@ -132,8 +154,20 @@ class Board:
         self.cellsLetters.sort()
         self.cellsNumbers.sort()
 
-        self.getBaseObj()
-        self.getCenterObj()
+        ## Checking the necessary empty object exist and are properly shaped
+        # Corners
+        for i in range(4):
+            cornerObj = self.getCornerObj(i)
+            cornerObj.empty_display_size = Board.CORNERS_OBJ_DISPLAY_SCALE
+            cornerObj.empty_display_type = Board.CORNERS_OBJ_DISPLAY
+
+        baseObj = self.getBaseObj()
+        baseObj.empty_display_size = Board.BASE_OBJ_DISPLAY_SCALE
+        baseObj.empty_display_type = Board.BASE_OBJ_DISPLAY
+
+        centerObj = self.getCenterObj()
+        centerObj.empty_display_size = Board.CENTER_OBJ_DISPLAY_SCALE
+        centerObj.empty_display_type = Board.CENTER_OBJ_DISPLAY
 
         try:
             # Checking if all cells are present among the set's children

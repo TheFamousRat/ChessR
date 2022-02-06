@@ -8,6 +8,7 @@ import warnings
 from math import *
 from mathutils import *
 import numpy as np
+import bpy_extras
 
 basedir = bpy.path.abspath("//")
 ## Local libraries (re-)loading
@@ -49,6 +50,9 @@ PIECE_BASE_NAME = 'Base'
 PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
 PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
 GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
+
+# 
+RENDERED_IMG_PATH = os.path.join(basedir, "temp.png")
 
 ### Functions
 #...
@@ -119,13 +123,23 @@ newPlateau.setBasePosAt(plateauPos)
 newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
 # Setting pieces randomly
-imagesGenerator.applyRandomScenarioToBoard(newPlateau, chessSets[0])
+imagesGenerator.applyRandomConfigurationToBoard(newPlateau, chessSets[0])
 
 # Positioning the active Camera randomly
 cam = bpy.context.scene.camera
-cam.matrix_world = utils.lookAtFromPos(plateauPos, plateauPos + Vector((0.0, 0.0, 1.0)), Vector((0.0, 0.0, 1.0)))
+cam.matrix_world = utils.lookAtFromPos(plateauPos, plateauPos + Vector((1.0, 0.0, 1.0)), Vector((0.0, 0.0, 1.0)))
 
 # Cheeky rendering
-bpy.ops.render.render()#'INVOKE_DEFAULT')
+print("Rendering...")
+bpy.context.scene.render.filepath = RENDERED_IMG_PATH
+bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
 
+# Getting the corners
+for i in range(4):
+    cornerObj = newPlateau.getCornerObj(i)
+    print(bpy_extras.object_utils.world_to_camera_view(bpy.context.scene, cam, cornerObj.matrix_world.to_translation()))
+
+
+print("Removing created data...")
 newPlateau.delete(True)
+
