@@ -11,6 +11,7 @@ class BoardConfigurationGenerator:
     Class focusing on randomly generating and applying plausible rendering situations of Board game configurations
     """
     FOCAL_LENGTH_RANGE = (30.0, 50.0)
+    MAX_CAM_ANGLE_FROM_UPWARDS = np.pi * (20.0 / 180.0)
 
     def __init__(self) -> None:
         self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a configuration
@@ -70,7 +71,7 @@ class BoardConfigurationGenerator:
         Randomly positions the camera at an overlooking again of the board, focused on its center (roughly)
         """
         ## Positioning the camera roughly over the board's center
-        theta = np.random.uniform(low=0.0, high=0.6) 
+        theta = np.random.uniform(low=0.0, high=self.MAX_CAM_ANGLE_FROM_UPWARDS) 
         phi = np.random.uniform(low=0.0, high=2.0*np.pi)
         r = 1.0
 
