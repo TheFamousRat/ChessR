@@ -3,6 +3,7 @@ import bpy_extras
 import numpy as np
 from mathutils import *
 import utils
+import globals as glob
     
 
 class BoardConfigurationGenerator:
@@ -64,7 +65,7 @@ class BoardConfigurationGenerator:
 
         self.lastAppliedConfig = configuration
     
-    def positionCameraAroundBoardCenter(self, board, cam, renderFrame):
+    def positionCameraAroundBoardCenter(self, board, cam):
         """
         Randomly positions the camera at an overlooking again of the board, focused on its center (roughly)
         """
@@ -91,19 +92,19 @@ class BoardConfigurationGenerator:
         # Adding movement in past frames
         framesRange = range(0, 10)
         for i in framesRange:
-            cam.keyframe_insert("location", frame=renderFrame-i)
+            cam.keyframe_insert("location", frame=glob.RENDER_FRAME-i)
             cam.location += Vector(radialMoveVec)
 
     def shuffleCameraConfig(self, cam):
         cam.data.lens = np.random.uniform(low=self.FOCAL_LENGTH_RANGE[0], high=self.FOCAL_LENGTH_RANGE[1])
 
-    def generateRandomRenderConfiguration(self, board, piecesSet, cam, renderFrame):
+    def generateRandomRenderConfiguration(self, board, piecesSet, cam):
         ## Creating and applying a random configuration to the scene
         config = self.generateRandomPiecesPlacement(piecesSet.getStoredPiecesTypes(), board.cellsNames)
         self.applyConfigurationToBoard(config, board, piecesSet)
 
         self.shuffleCameraConfig(cam)
-        self.positionCameraAroundBoardCenter(board, cam, renderFrame)
+        self.positionCameraAroundBoardCenter(board, cam)
 
         ## Making the annotations for the currently used configuration
         annotations = {}

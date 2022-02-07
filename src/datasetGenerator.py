@@ -20,15 +20,18 @@ for pathToAdd in pathsToAdd:
     sys.path.append(pathToAdd)
 
 import utils
+import globals
 import Board
 import BoardImagesGenerator
 
 import importlib
 importlib.reload(utils)
+importlib.reload(globals)
 importlib.reload(Board)
 importlib.reload(BoardImagesGenerator)
 
 from BoardImagesGenerator import BoardConfigurationGenerator
+import globals as glob
 
 for pathToAdd in pathsToAdd:
     sys.path.remove(pathToAdd)
@@ -44,29 +47,17 @@ cellsCount = len(CELLS_LETTERS) * len(CELLS_NUMBERS)
 CELLS_NAMES = [cellLetter + cellNumber for cellLetter in CELLS_LETTERS for cellNumber in CELLS_NUMBERS]
 CELLS_NAMES.sort()
 
-# Name of the reference at the foot of the piece, giving its diameter and center position
-PIECE_BASE_NAME = 'Base'
-
 # Gathering the relevant collection, raising an exception if they don't exist
 PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
 PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
 GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
 
-# 
-OUTPUT_FOLDER = os.path.join(basedir, "out")
-if not os.path.exists(OUTPUT_FOLDER):
-    os.makedirs(OUTPUT_FOLDER)
-
 #
 cam = bpy.context.scene.camera
-WORKING_FRAME = 1 #The frame at which the render is done. Used for motion blurring
+
 
 ### Functions
 #...
-
-
-
-cam = bpy.context.scene.camera
 
 
 ### Program body
@@ -141,17 +132,17 @@ for imageIdx in range(imagesToRenderCount):
     newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
     # Setting pieces randomly
-    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam, WORKING_FRAME)
+    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
 
     # Cheeky rendering
-    renderedImagePath = os.path.join(OUTPUT_FOLDER, "{}.jpg".format(imageIdx))
+    renderedImagePath = os.path.join(glob.OUTPUT_FOLDER, "{}.jpg".format(imageIdx))
     bpy.context.scene.render.filepath = renderedImagePath
     
-    bpy.context.scene.frame_set(WORKING_FRAME)
+    bpy.context.scene.frame_set(glob.RENDER_FRAME)
     bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
     
     # Dumping the annotations data
-    annotationsPath = os.path.join(OUTPUT_FOLDER, "{}.json".format(imageIdx))
+    annotationsPath = os.path.join(glob.OUTPUT_FOLDER, "{}.json".format(imageIdx))
     json.dump(annotations, open(annotationsPath, "w"))
 
     # Cleaning created data
