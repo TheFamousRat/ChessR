@@ -3,6 +3,10 @@ import bpy
 import re
 import numpy as np
 
+"""
+Library collecting general utils in math or Blender API that are used frequently throughout the code but aren't tied to a specific task
+"""
+
 def setSelectOfObjectAndChildren(obj, selectState):
     """
     Sets a node and its hierarchy to a given selectState (True or False)
@@ -75,7 +79,10 @@ def duplicateObjectAndHierarchy(obj, linked=False):
 
     return dupObj
 
-def lookAtFromPos(targetPos, lookPos, upVector):
+def getSphericalCoordinates(radius : float, theta : float, phi : float):
+    return radius * np.array([np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)])
+
+def lookAtFromPos(targetPos, lookPos, upVector = np.array([0.0, 0.0, 1.0])):
     """
     Returns the transform to apply to an object so that it looks towards targetPos, from a given position lookPos and with a given up vector upVector
     :param nparray targetPos: Position to which to look

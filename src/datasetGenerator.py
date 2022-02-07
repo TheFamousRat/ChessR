@@ -27,7 +27,7 @@ importlib.reload(utils)
 importlib.reload(Board)
 importlib.reload(BoardImagesGenerator)
 
-from BoardImagesGenerator import BoardImagesGenerator
+from BoardImagesGenerator import BoardConfigurationGenerator
 
 for pathToAdd in pathsToAdd:
     sys.path.remove(pathToAdd)
@@ -52,10 +52,20 @@ PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
 GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
 
 # 
-RENDERED_IMG_PATH = os.path.join(basedir, "temp.png")
+OUTPUT_FOLDER = os.path.join(basedir, "out")
+if not os.path.exists(OUTPUT_FOLDER):
+    os.makedirs(OUTPUT_FOLDER)
+
+#
+cam = bpy.context.scene.camera
 
 ### Functions
 #...
+
+
+
+cam = bpy.context.scene.camera
+
 
 ### Program body
 ## Loading necessary data (plateaux, sets, pieces types etc.)
@@ -113,33 +123,35 @@ if not allSetsSuccessfullyInstanced:
     raise Exception("Some pieces sets were not correctly instanciated, please check the log.")
 
 ## Generating scenarios
-imagesGenerator = BoardImagesGenerator()
-
+print("Rendering...")
+imagesToRenderCount = 10
+imagesGenerator = BoardConfigurationGenerator()
 plateauPos = Vector((0,2,0))
 
-# Setting board pos
-newPlateau = allPlateaux[0].duplicate()
-newPlateau.setBasePosAt(plateauPos)
-newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
+for imageIdx in range(imagesToRenderCount):
+    print("Rendering image number {}...".format(imageIdx))
+    # Setting board pos
+    usedBoard = np.random.choice(allPlateaux)
+    usedSet = np.random.choice(chessSets)
 
-# Setting pieces randomly
-imagesGenerator.applyRandomConfigurationToBoard(newPlateau, chessSets[0])
+    newPlateau = usedBoard.duplicate()
+    newPlateau.setBasePosAt(plateauPos)
+    newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
-# Positioning the active Camera randomly
-cam = bpy.context.scene.camera
-cam.matrix_world = utils.lookAtFromPos(plateauPos, plateauPos + Vector((1.0, 0.0, 1.0)), Vector((0.0, 0.0, 1.0)))
+    # Setting pieces randomly
+    imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
 
-# Cheeky rendering
-print("Rendering...")
-bpy.context.scene.render.filepath = RENDERED_IMG_PATH
-bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
+    # Cheeky rendering
+    renderedImagePath = os.path.join(OUTPUT_FOLDER, "{}.png".format(imageIdx))
+    bpy.context.scene.render.filepath = renderedImagePath
+    bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
 
-# Getting the corners
-for i in range(4):
-    cornerObj = newPlateau.getCornerObj(i)
-    print(bpy_extras.object_utils.world_to_camera_view(bpy.context.scene, cam, cornerObj.matrix_world.to_translation()))
+    # Getting the corners
+    for i in range(4):
+        cornerObj = newPlateau.getCornerObj(i)
+        print(bpy_extras.object_utils.world_to_camera_view(bpy.context.scene, cam, cornerObj.matrix_world.to_translation()))
 
+    print("Removing created data...")
+    newPlateau.delete(True)
 
-print("Removing created data...")
-newPlateau.delete(True)
-
+print("Done.")

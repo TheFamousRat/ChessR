@@ -23,10 +23,16 @@ class Board:
 
     def delete(self, deleteAddedPieces):
         if deleteAddedPieces:
-            for cellName in self.cellsPieces:
-                self.cellsPieces[cellName].delete()
-            self.cellsPieces = {}
+            self.deletePieces()
         utils.deleteObjAndHierarchy(self.mesh)
+
+    def deletePieces(self):
+        """
+        Removing all the pieces currently placed on the board
+        """
+        for cellName in self.cellsPieces:
+            self.cellsPieces[cellName].delete()
+        self.cellsPieces = {}
     
     def setCellPiece(self, cellName, piece):
         """
