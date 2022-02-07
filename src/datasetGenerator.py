@@ -4,6 +4,7 @@ import bpy
 import re
 import os
 import sys
+import json
 import warnings
 from math import *
 from mathutils import *
@@ -139,18 +140,18 @@ for imageIdx in range(imagesToRenderCount):
     newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
     # Setting pieces randomly
-    imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
+    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
 
     # Cheeky rendering
     renderedImagePath = os.path.join(OUTPUT_FOLDER, "{}.png".format(imageIdx))
     bpy.context.scene.render.filepath = renderedImagePath
     bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
+    
+    # Dumping the annotations data
+    annotationsPath = os.path.join(OUTPUT_FOLDER, "{}.json".format(imageIdx))
+    json.dump(annotations, open(annotationsPath, "w"))
 
-    # Getting the corners
-    for i in range(4):
-        cornerObj = newPlateau.getCornerObj(i)
-        print(bpy_extras.object_utils.world_to_camera_view(bpy.context.scene, cam, cornerObj.matrix_world.to_translation()))
-
+    # Cleaning created data
     print("Removing created data...")
     newPlateau.delete(True)
 

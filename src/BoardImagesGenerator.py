@@ -1,3 +1,4 @@
+import bpy_extras
 import numpy as np
 from mathutils import *
 import utils
@@ -74,14 +75,20 @@ class BoardConfigurationGenerator:
         boardCenter = np.array(boardCenterObj.matrix_world.to_translation())
         cam.matrix_world = utils.lookAtFromPos(boardCenter, boardCenter + utils.getSphericalCoordinates(r, theta, phi))
 
-    def outputLastRenderAnnotations(self, filepath):
-        """
-        Outputs to a JSON file the annotations of the last generated configuration
-        """
-        pass
-
     def generateRandomRenderConfiguration(self, board, piecesSet, cam):
+        ## Creating and applying a random configuration to the scene
         config = self.generateRandomPiecesPlacement(piecesSet.getStoredPiecesTypes(), board.cellsNames)
         self.applyConfigurationToBoard(config, board, piecesSet)
         self.positionCameraAroundBoardCenter(board, cam)
+
+        ## Making the annotations for the currently used configuration
+        annotations = {}
+
+        annotations["config"] = config
+
+        cornerObjs = [board.getCornerObj(cornerId) for cornerId in range(4)]
+        cornerScreenPos = [bpy_extras.object_utils.world_to_camera_view(cam.users_scene[0], cam, ob.matrix_world.to_translation()) for ob in cornerObjs]
+        annotations["corners"] = [(pos[0], pos[1]) for pos in cornerScreenPos]
+
+        return annotations
 
