@@ -1,0 +1,11 @@
+Done : 
+Random configuration
+Random selection of the board and pieces
+Random rotation and placement (within limits) of the pieces on their cells
+Random angle for the Camera, overlooking the center of the board (angle up to 35° off from the most overlooking position)
+Random variation of the focal length between plausible values for a phone camera, that is between 30° and 50°
+Motion blur (slight)
+
+Planned : 
+Random HDRI change
+Changes in lightning (mainly simulating flash)

@@ -59,6 +59,7 @@ if not os.path.exists(OUTPUT_FOLDER):
 
 #
 cam = bpy.context.scene.camera
+WORKING_FRAME = 1 #The frame at which the render is done. Used for motion blurring
 
 ### Functions
 #...
@@ -140,11 +141,13 @@ for imageIdx in range(imagesToRenderCount):
     newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
     # Setting pieces randomly
-    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
+    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam, WORKING_FRAME)
 
     # Cheeky rendering
-    renderedImagePath = os.path.join(OUTPUT_FOLDER, "{}.png".format(imageIdx))
+    renderedImagePath = os.path.join(OUTPUT_FOLDER, "{}.jpg".format(imageIdx))
     bpy.context.scene.render.filepath = renderedImagePath
+    
+    bpy.context.scene.frame_set(WORKING_FRAME)
     bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
     
     # Dumping the annotations data

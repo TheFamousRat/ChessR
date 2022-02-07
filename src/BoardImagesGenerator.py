@@ -1,3 +1,4 @@
+import bpy
 import bpy_extras
 import numpy as np
 from mathutils import *
@@ -8,9 +9,9 @@ class BoardConfigurationGenerator:
     """
     Class focusing on randomly generating and applying plausible rendering situations of Board game configurations
     """
+    FOCAL_LENGTH_RANGE = (30.0, 50.0)
+
     def __init__(self) -> None:
-        self.imagesWidth = 640 #Width and height of output images
-        self.imagesHeight = 640 
         self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a configuration
         self.lastAppliedConfig = None
 
@@ -63,11 +64,12 @@ class BoardConfigurationGenerator:
 
         self.lastAppliedConfig = configuration
     
-    def positionCameraAroundBoardCenter(self, board, cam):
+    def positionCameraAroundBoardCenter(self, board, cam, renderFrame):
         """
         Randomly positions the camera at an overlooking again of the board, focused on its center (roughly)
         """
-        theta = np.random.uniform(low=0.0, high=0.7) 
+        ## Positioning the camera roughly over the board's center
+        theta = np.random.uniform(low=0.0, high=0.6) 
         phi = np.random.uniform(low=0.0, high=2.0*np.pi)
         r = 1.0
 
@@ -75,11 +77,33 @@ class BoardConfigurationGenerator:
         boardCenter = np.array(boardCenterObj.matrix_world.to_translation())
         cam.matrix_world = utils.lookAtFromPos(boardCenter, boardCenter + utils.getSphericalCoordinates(r, theta, phi))
 
-    def generateRandomRenderConfiguration(self, board, piecesSet, cam):
+        ## Adding a bit of motion blur
+        # Adding previous keys in previous frames to simulate past camera movement
+        theta = np.random.uniform(0.0, np.pi)
+        phi = np.random.uniform(0.0, 2.0 * np.pi)
+        radius = 0.2 * np.random.beta(a=1, b=10)
+        radialMoveVec = utils.getSphericalCoordinates(radius, theta, phi)
+
+        # Clearing previous animations
+        bpy.context.view_layer.objects.active = cam
+        bpy.context.active_object.animation_data_clear()
+
+        # Adding movement in past frames
+        framesRange = range(0, 10)
+        for i in framesRange:
+            cam.keyframe_insert("location", frame=renderFrame-i)
+            cam.location += Vector(radialMoveVec)
+
+    def shuffleCameraConfig(self, cam):
+        cam.data.lens = np.random.uniform(low=self.FOCAL_LENGTH_RANGE[0], high=self.FOCAL_LENGTH_RANGE[1])
+
+    def generateRandomRenderConfiguration(self, board, piecesSet, cam, renderFrame):
         ## Creating and applying a random configuration to the scene
         config = self.generateRandomPiecesPlacement(piecesSet.getStoredPiecesTypes(), board.cellsNames)
         self.applyConfigurationToBoard(config, board, piecesSet)
-        self.positionCameraAroundBoardCenter(board, cam)
+
+        self.shuffleCameraConfig(cam)
+        self.positionCameraAroundBoardCenter(board, cam, renderFrame)
 
         ## Making the annotations for the currently used configuration
         annotations = {}
