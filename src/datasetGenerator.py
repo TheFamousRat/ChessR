@@ -50,17 +50,35 @@ CELLS_NAMES.sort()
 # Gathering the relevant collection, raising an exception if they don't exist
 PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
 PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
-GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Chess sets')
+GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Pieces sets')
+
+EMPTIES_COLLECTION_NAME = 'empties'
+if not EMPTIES_COLLECTION_NAME in bpy.data.collections:
+    bpy.data.collections.new(EMPTIES_COLLECTION_NAME)
+EMPTIES_COLLECTION = bpy.data.collections['empties']
 
 #
 cam = bpy.context.scene.camera
 
 
 ### Functions
-#...
-
 
 ### Program body
+
+# Removing empties from all collections except the main one
+empties = [ob for ob in bpy.data.objects if ob.type == 'EMPTY']
+for empty in empties:
+    collecsToRemove = []
+    for collec in empty.users_collection:
+        if collec != EMPTIES_COLLECTION:
+            collecsToRemove.append(collec)
+            
+    for collec in collecsToRemove:
+        collec.objects.unlink(empty)
+    
+    if not EMPTIES_COLLECTION in empty.users_collection:
+        EMPTIES_COLLECTION.objects.link(empty)
+
 ## Loading necessary data (plateaux, sets, pieces types etc.)
 # Loading plateaux
 print("Instanciating boards")
@@ -68,6 +86,7 @@ print("Instanciating boards")
 allPlateaux = []
 allBoardSuccessfullyInstanced = True
 for plateau in PLATEAUX_COLLECTION.objects:
+    
     try:
         newBoard = Board.Board(plateau, CELLS_NAMES)
         allPlateaux.append(newBoard)
@@ -117,7 +136,7 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 print("Rendering...")
-imagesToRenderCount = 1
+imagesToRenderCount = 10
 imagesGenerator = BoardConfigurationGenerator()
 plateauPos = Vector((0,2,0))
 
