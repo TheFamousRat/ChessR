@@ -1,15 +1,12 @@
 ### Modules
-from ctypes import util
 import bpy
-import re
 import os
 import sys
-import json
 import warnings
 from math import *
 from mathutils import *
 import numpy as np
-import bpy_extras
+from progress.bar import Bar
 
 basedir = bpy.path.abspath("//")
 ## Local libraries (re-)loading
@@ -30,7 +27,7 @@ importlib.reload(globals)
 importlib.reload(Board)
 importlib.reload(BoardImagesGenerator)
 
-from BoardImagesGenerator import BoardConfigurationGenerator
+from BoardImagesGenerator import BoardConfigurationGenerator, RenderIdGenerator
 import globals as glob
 
 for pathToAdd in pathsToAdd:
@@ -136,12 +133,12 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 print("Rendering...")
-imagesToRenderCount = 10
+imagesToRenderCount = 1000
 imagesGenerator = BoardConfigurationGenerator()
-plateauPos = Vector((0,2,0))
+plateauPos = Vector((-10,10,0))
 
+bar = Bar("Rendered image : ", max=imagesToRenderCount)
 for imageIdx in range(imagesToRenderCount):
-    print("Rendering image number {}...".format(imageIdx))
     # Setting board pos
     usedBoard = np.random.choice(allPlateaux)
     usedSet = np.random.choice(chessSets)
@@ -152,20 +149,11 @@ for imageIdx in range(imagesToRenderCount):
 
     # Setting pieces randomly
     annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
-
-    # Cheeky rendering
-    renderedImagePath = os.path.join(glob.OUTPUT_FOLDER, "{}.jpg".format(imageIdx))
-    bpy.context.scene.render.filepath = renderedImagePath
+    imagesGenerator.renderAndStoreBoardAndAnnotations(annotations)
     
-    bpy.context.scene.frame_set(glob.RENDER_FRAME)
-    bpy.ops.render.render(write_still=True)#'INVOKE_DEFAULT')
-    
-    # Dumping the annotations data
-    annotationsPath = os.path.join(glob.OUTPUT_FOLDER, "{}.json".format(imageIdx))
-    json.dump(annotations, open(annotationsPath, "w"))
-
     # Cleaning created data
     print("Removing created data...")
     newPlateau.delete(True)
+    bar.next()
 
 print("Done.")

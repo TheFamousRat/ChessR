@@ -4,7 +4,45 @@ import numpy as np
 from mathutils import *
 import utils
 import globals as glob
+import os
+import imghdr
+import json
     
+def getRenderName(renderIdx):
+    return "{}.jpg".format(renderIdx)
+
+def getRenderDataName(renderIdx):
+    return "{}.json".format(renderIdx)
+
+class RenderIdGenerator:
+    def __init__(self) -> None:
+        self.analyzedPaths = {}
+
+    def isRenderValid(self, folder, renderId):
+        if (not os.path.exists(os.path.join(folder, getRenderName(renderId)))) or (not os.path.exists(os.path.join(folder, getRenderDataName(renderId)))):
+            return False
+        
+        return imghdr.what(os.path.join(folder, getRenderName(renderId))) != None
+
+    def getNextFreeIdInPath(self, path):
+        if not path in self.analyzedPaths:
+            self.reAnalyzePath(path)
+
+        if len(self.analyzedPaths[path]) == 1:
+            self.analyzedPaths[path][0] += 1
+            return self.analyzedPaths[path][0] - 1
+        else:
+            return self.analyzedPaths[path].pop(0)
+
+    def reAnalyzePath(self, path):
+        # Getting the numbers of the images in the output folder
+        imgsInFolder = [file for file in os.listdir(path) if imghdr.what(os.path.join(path, file))]
+        imgsNumbers = [int(os.path.splitext(img)[0]) for img in imgsInFolder]
+        imgsNumbers = [imgNum for imgNum in imgsNumbers if self.isRenderValid(glob.OUTPUT_FOLDER, imgNum)]
+
+        # 
+        self.analyzedPaths[path] = [i for i in range(max(imgsNumbers)) if not (i in imgsNumbers)]
+        self.analyzedPaths[path] = self.analyzedPaths[path] + [max(imgsNumbers)+1]
 
 class BoardConfigurationGenerator:
     """
@@ -16,6 +54,7 @@ class BoardConfigurationGenerator:
     def __init__(self) -> None:
         self.emptyCellProb = 0.5 #Probability of a cell being empty when generating a configuration
         self.lastAppliedConfig = None
+        self.idGenerator = RenderIdGenerator()
 
     def duplicateAndPlacePieceOnBoardCell(self, pieceToDup, board, cellName):
         """
@@ -129,4 +168,19 @@ class BoardConfigurationGenerator:
         annotations["corners"] = [(pos[0], pos[1]) for pos in cornerScreenPos]
 
         return annotations
+    
+    def renderAndStoreBoardAndAnnotations(self, annotations):
+        imgIdx = self.idGenerator.getNextFreeIdInPath(glob.OUTPUT_FOLDER)
 
+        # Cheeky rendering
+        renderedImagePath = os.path.join(glob.OUTPUT_FOLDER, getRenderName(imgIdx))
+        bpy.context.scene.render.filepath = renderedImagePath
+        
+        bpy.context.scene.frame_set(glob.RENDER_FRAME)
+        bpy.ops.render.render(write_still=True)
+        
+        # Dumping the annotations data
+        annotationsPath = os.path.join(glob.OUTPUT_FOLDER, getRenderDataName(imgIdx))
+        json.dump(annotations, open(annotationsPath, "w"))
+
+        print("Render outputs created in files {} and {}".format(renderedImagePath, annotationsPath))
