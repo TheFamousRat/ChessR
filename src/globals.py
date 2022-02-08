@@ -22,7 +22,7 @@ def getNonEmptyCollection(collectionName):
 basedir = bpy.path.abspath("//")
 
 # Output folder
-OUTPUT_FOLDER = os.path.join(basedir, "out")
+OUTPUT_FOLDER = os.path.join(basedir, "data")
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 

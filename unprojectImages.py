@@ -1,14 +1,17 @@
+from email.mime import base
 import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import json
 
-T_WIDTH = 224
-T_HEIGHT = 224
+T_WIDTH = 416
+T_HEIGHT = 416
 
-basedir = "../"#bpy.path.abspath("//")
-outFolder = os.path.join(basedir, "out")
+basedir = "."
+inputFolder = os.path.join(basedir, "data")
+outputfolder = os.path.join(basedir, "test")
+print(inputFolder)
 
 def getSegmentsIntersection(a1, a2, b1, b2):
     """
@@ -58,9 +61,13 @@ def getUnprojectedGameBoardFromImg(img_, boardCornersRel, growthFactor = 0.0):
 
     return cv2.warpPerspective(img_, M, (T_WIDTH, T_HEIGHT),flags=cv2.INTER_LINEAR)
 
-for dataNum in [1698]:
-    imgPath = os.path.join(outFolder, "{}.jpg".format(dataNum))
-    annotationsPath = os.path.join(outFolder, "{}.json".format(dataNum))
+from progress.bar import Bar
+
+numIts = 1938
+bar = Bar("Treating image #", max = numIts)
+for dataNum in range(numIts):
+    imgPath = os.path.join(inputFolder, "{}.jpg".format(dataNum))
+    annotationsPath = os.path.join(inputFolder, "{}.json".format(dataNum))
 
     annotations = json.load(open(annotationsPath, "r"))
 
@@ -72,6 +79,7 @@ for dataNum in [1698]:
     cornersRel = np.column_stack((cornersRel[:,0], 1.0 - cornersRel[:,1]))
 
     out = getUnprojectedGameBoardFromImg(img, cornersRel, 0.1)
-    cv2.imwrite(os.path.join(outFolder, "{}_unwrapped.jpg".format(dataNum)),  out)
+    cv2.imwrite(os.path.join(outputfolder, "{}_unwrapped.jpg".format(dataNum)),  out)
     #plt.imshow(out)
     #plt.show()
+    bar.next()
