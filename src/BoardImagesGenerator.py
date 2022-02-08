@@ -14,6 +14,13 @@ def getRenderName(renderIdx):
 def getRenderDataName(renderIdx):
     return "{}.json".format(renderIdx)
 
+def is_float(element) -> bool:
+    try:
+        float(element)
+        return True
+    except ValueError:
+        return False
+
 class RenderIdGenerator:
     def __init__(self) -> None:
         self.analyzedPaths = {}
@@ -36,13 +43,16 @@ class RenderIdGenerator:
 
     def reAnalyzePath(self, path):
         # Getting the numbers of the images in the output folder
-        imgsInFolder = [file for file in os.listdir(path) if imghdr.what(os.path.join(path, file))]
+        imgsInFolder = [file for file in os.listdir(path) if (imghdr.what(os.path.join(path, file)) and is_float(os.path.splitext(file)[0]))]
         imgsNumbers = [int(os.path.splitext(img)[0]) for img in imgsInFolder]
         imgsNumbers = [imgNum for imgNum in imgsNumbers if self.isRenderValid(glob.OUTPUT_FOLDER, imgNum)]
 
         # 
-        self.analyzedPaths[path] = [i for i in range(max(imgsNumbers)) if not (i in imgsNumbers)]
-        self.analyzedPaths[path] = self.analyzedPaths[path] + [max(imgsNumbers)+1]
+        if len(imgsNumbers) > 0:
+            self.analyzedPaths[path] = [i for i in range(max(imgsNumbers)) if not (i in imgsNumbers)]
+            self.analyzedPaths[path] = self.analyzedPaths[path] + [max(imgsNumbers)+1]
+        else:
+            self.analyzedPaths[path] = [0]
 
 class BoardConfigurationGenerator:
     """
@@ -158,10 +168,11 @@ class BoardConfigurationGenerator:
         self.shuffleCameraConfig(cam)
         self.positionCameraAroundBoardCenter(board, cam)
 
+    def getBoardAnnotations(self, board, cam):
         ## Making the annotations for the currently used configuration
         annotations = {}
 
-        annotations["config"] = config
+        annotations["config"] = board.getPiecesTypesPlacement()
 
         cornerObjs = [board.getCornerObj(cornerId) for cornerId in range(4)]
         cornerScreenPos = [bpy_extras.object_utils.world_to_camera_view(cam.users_scene[0], cam, ob.matrix_world.to_translation()) for ob in cornerObjs]
@@ -169,7 +180,7 @@ class BoardConfigurationGenerator:
 
         return annotations
     
-    def renderAndStoreBoardAndAnnotations(self, annotations):
+    def renderAndStoreBoardAndAnnotations(self, board, cam):
         imgIdx = self.idGenerator.getNextFreeIdInPath(glob.OUTPUT_FOLDER)
 
         # Cheeky rendering
@@ -181,6 +192,7 @@ class BoardConfigurationGenerator:
         
         # Dumping the annotations data
         annotationsPath = os.path.join(glob.OUTPUT_FOLDER, getRenderDataName(imgIdx))
+        annotations = self.getBoardAnnotations(board, cam)
         json.dump(annotations, open(annotationsPath, "w"))
 
         print("Render outputs created in files {} and {}".format(renderedImagePath, annotationsPath))

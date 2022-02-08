@@ -5,6 +5,7 @@ import bpy
 import re
 import numpy as np
 from mathutils import *
+import globals as glob
 
 import utils
 
@@ -33,6 +34,9 @@ class Board:
         for cellName in self.cellsPieces:
             self.cellsPieces[cellName].delete()
         self.cellsPieces = {}
+
+    def getPiecesTypesPlacement(self):
+        return {cellName : self.cellsPieces[cellName].type for cellName in self.cellsPieces}
     
     def setCellPiece(self, cellName, piece):
         """
@@ -216,6 +220,16 @@ class Piece:
     def getBase(self):
         return utils.getChildWithNameContaining(self.mesh, "Base")
 
+    def getPieceType(self):
+        pieceTypeCollection = list(set(self.mesh.users_collection) & set(glob.PIECES_TYPES_COLLECTION.children))
+        
+        if (len(pieceTypeCollection) > 1):
+            raise Exception("Piece '{}' belongs to more than one chess type, check if it belongs to more than one chess type collection".format(self.mesh))
+        elif (len(pieceTypeCollection) == 0):
+            raise Exception("Piece '{}' belongs to no chess type".format(self.mesh))
+        else:
+            return pieceTypeCollection[0].name
+
     def __init__(self, sourceMesh_) -> None:
         """
         Creating a Piece instance from a given adequately prepared mesh
@@ -223,6 +237,7 @@ class Piece:
         :param mesh sourceMesh_: A Blender mesh with a piece structure
         """
         self.mesh = sourceMesh_
+        self.type = self.getPieceType()
 
         self.base = self.getBase()
         if self.base == None:
@@ -273,19 +288,12 @@ class PiecesSet:
         #Looking for items in the collection that are registered as chess pieces
         for collectionItem in self.sourceCollection.objects:
             #Checking if the item is also present in collections containing pieces of a certain type
-            pieceTypeCollection = list(set(collectionItem.users_collection) & set(piecesTypesCollection.children))
-            
-            if (len(pieceTypeCollection) > 1):
-                raise Exception("Piece '{}' belongs to more than one chess type, check if it belongs to more than one chess type collection".format(collectionItem))
-            elif len(pieceTypeCollection) == 1:
-                pieceType = pieceTypeCollection[0].name
-                
-                try:
-                    piece = Piece(collectionItem)
+            try:
+                piece = Piece(collectionItem)
 
-                    if not (pieceType in self.pieces):
-                        self.pieces[pieceType] = []
+                if not (piece.type in self.pieces):
+                    self.pieces[piece.type] = []
 
-                    self.pieces[pieceType].append(piece)
-                except Exception as e:
-                    warnings.warn("Could not instanciate the piece '{}' : {}".format(collectionItem.name, e))
+                self.pieces[piece.type].append(piece)
+            except Exception as e:
+                warnings.warn("Could not instanciate the piece '{}' : {}".format(collectionItem.name, e))

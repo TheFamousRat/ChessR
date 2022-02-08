@@ -28,7 +28,7 @@ importlib.reload(Board)
 importlib.reload(BoardImagesGenerator)
 
 from BoardImagesGenerator import BoardConfigurationGenerator, RenderIdGenerator
-import globals as glob
+from globals import *
 
 for pathToAdd in pathsToAdd:
     sys.path.remove(pathToAdd)
@@ -43,16 +43,6 @@ CELLS_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"]
 cellsCount = len(CELLS_LETTERS) * len(CELLS_NUMBERS)
 CELLS_NAMES = [cellLetter + cellNumber for cellLetter in CELLS_LETTERS for cellNumber in CELLS_NUMBERS]
 CELLS_NAMES.sort()
-
-# Gathering the relevant collection, raising an exception if they don't exist
-PLATEAUX_COLLECTION = utils.getNonEmptyCollection('plateaux')
-PIECES_TYPES_COLLECTION = utils.getNonEmptyCollection('piecesTypes')
-GAME_SETS_COLLECTION = utils.getNonEmptyCollection('Pieces sets')
-
-EMPTIES_COLLECTION_NAME = 'empties'
-if not EMPTIES_COLLECTION_NAME in bpy.data.collections:
-    bpy.data.collections.new(EMPTIES_COLLECTION_NAME)
-EMPTIES_COLLECTION = bpy.data.collections['empties']
 
 #
 cam = bpy.context.scene.camera
@@ -119,6 +109,7 @@ for chessSet in GAME_SETS_COLLECTION.children:
     newBoard = Board.PiecesSet(chessSet, PIECES_TYPES_COLLECTION)
     
     setPiecesTypes = list(newBoard.pieces)
+    print(setPiecesTypes)
     setPiecesTypes.sort()
 
     if setPiecesTypes != piecesTypes:
@@ -133,11 +124,15 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 print("Rendering...")
-imagesToRenderCount = 1000
+imagesToRenderCount = 2000
 imagesGenerator = BoardConfigurationGenerator()
 plateauPos = Vector((-10,10,0))
 
+import time 
+
 bar = Bar("Rendered image : ", max=imagesToRenderCount)
+
+start = time.time()
 for imageIdx in range(imagesToRenderCount):
     # Setting board pos
     usedBoard = np.random.choice(allPlateaux)
@@ -148,12 +143,15 @@ for imageIdx in range(imagesToRenderCount):
     newPlateau.mesh.rotation_euler[2] = np.random.uniform(2.0*np.pi)
 
     # Setting pieces randomly
-    annotations = imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
-    imagesGenerator.renderAndStoreBoardAndAnnotations(annotations)
+    imagesGenerator.generateRandomRenderConfiguration(newPlateau, usedSet, cam)
+    imagesGenerator.renderAndStoreBoardAndAnnotations(newPlateau, cam)
     
     # Cleaning created data
     print("Removing created data...")
     newPlateau.delete(True)
     bar.next()
+
+end = time.time()
+print(float(end - start) / float(imagesToRenderCount))
 
 print("Done.")
