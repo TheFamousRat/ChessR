@@ -136,7 +136,7 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 print("Rendering...")
-imagesToRenderCount = 1
+imagesToRenderCount = 10
 imagesGenerator = BoardConfigurationGenerator()
 plateauPos = Vector((0,2,0))
 
@@ -165,7 +165,6 @@ for imageIdx in range(imagesToRenderCount):
     json.dump(annotations, open(annotationsPath, "w"))
 
     # Cleaning created data
-    break
     print("Removing created data...")
     newPlateau.delete(True)
 

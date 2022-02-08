@@ -99,11 +99,23 @@ class BoardConfigurationGenerator:
     def shuffleCameraConfig(self, cam):
         cam.data.lens = np.random.uniform(low=self.FOCAL_LENGTH_RANGE[0], high=self.FOCAL_LENGTH_RANGE[1])
 
+    def setRandomHDRI(self):
+        # Picking an HDRI to take here
+        hdri = np.random.choice(glob.hdrisLoaded)
+
+        # Applying it to the world texture
+        bpy.context.scene.world.node_tree.nodes['Environment Texture'].image = hdri
+
     def generateRandomRenderConfiguration(self, board, piecesSet, cam):
         ## Creating and applying a random configuration to the scene
+        # Setting up the 3d models on the scene (board, pieces)
         config = self.generateRandomPiecesPlacement(piecesSet.getStoredPiecesTypes(), board.cellsNames)
         self.applyConfigurationToBoard(config, board, piecesSet)
 
+        # Random HDRI picking
+        self.setRandomHDRI()
+
+        # Randomly setting up the camera with plausible values
         self.shuffleCameraConfig(cam)
         self.positionCameraAroundBoardCenter(board, cam)
 
