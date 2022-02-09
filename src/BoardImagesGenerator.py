@@ -155,6 +155,25 @@ class BoardConfigurationGenerator:
         # Applying it to the world texture
         bpy.context.scene.world.node_tree.nodes['Environment Texture'].image = hdri
 
+    def saveBoardConfigurationFile(self):
+        """
+        Creates a config file for a given render
+        """
+        configFilePath = os.path.join(glob.OUTPUT_FOLDER, "config.json")
+
+        # Creating the structured render data
+        config = {}
+        config["cellsCoordinates"] = glob.CELLS_COORDINATES
+        config["piecesTypes"] = glob.PIECES_TYPES
+
+        # Checking if an identical file exists, otherwise creating it
+        if os.path.exists(configFilePath):
+            prevConfig = json.load(open(configFilePath, "r"))
+            if prevConfig != config:
+                raise Exception("Trying to erase previous different config, please remove it and associated renders from the output folder.")
+        else:
+            json.dump(config, open(configFilePath, "w"))
+
     def generateRandomRenderConfiguration(self, board, piecesSet, cam):
         ## Creating and applying a random configuration to the scene
         # Setting up the 3d models on the scene (board, pieces)
