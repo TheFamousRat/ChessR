@@ -47,3 +47,22 @@ EMPTIES_COLLECTION_NAME = 'empties'
 if not EMPTIES_COLLECTION_NAME in bpy.data.collections:
     bpy.data.collections.new(EMPTIES_COLLECTION_NAME)
 EMPTIES_COLLECTION = bpy.data.collections['empties']
+
+# Plateau cells constants
+CELLS_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
+CELLS_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"]
+CELLS_COORDINATES = {cellLetter + cellNumber : (CELLS_LETTERS.index(cellLetter), CELLS_NUMBERS.index(cellNumber)) for cellLetter in CELLS_LETTERS for cellNumber in CELLS_NUMBERS}
+CELLS_NAMES = list(CELLS_COORDINATES.keys())
+CELLS_NAMES.sort()
+CELLS_COUNT = len(CELLS_NAMES)
+
+# Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes
+print("Loading pieces types")
+
+PIECES_TYPES = []
+for child in PIECES_TYPES_COLLECTION.children:
+    if isinstance(child, bpy.types.Collection):
+        PIECES_TYPES.append(child.name)
+PIECES_TYPES.sort()
+
+print("Found the following pieces types : {}".format(PIECES_TYPES))

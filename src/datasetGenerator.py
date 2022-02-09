@@ -37,12 +37,6 @@ import gc
 gc.collect()
 
 ### Constants
-# Plateau cells constants
-CELLS_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
-CELLS_NUMBERS = ["1", "2", "3", "4", "5", "6", "7", "8"]
-cellsCount = len(CELLS_LETTERS) * len(CELLS_NUMBERS)
-CELLS_NAMES = [cellLetter + cellNumber for cellLetter in CELLS_LETTERS for cellNumber in CELLS_NUMBERS]
-CELLS_NAMES.sort()
 
 #
 cam = bpy.context.scene.camera
@@ -85,17 +79,6 @@ for plateau in PLATEAUX_COLLECTION.objects:
 if not allBoardSuccessfullyInstanced:
     raise Exception("Some boards were not correctly instanciated, please check the log.")
 
-# Gathering all registered pieces types, represented by collections children to piecesTypes and containing links to the relevant pieces' meshes
-print("Loading pieces types")
-
-piecesTypes = []
-for child in PIECES_TYPES_COLLECTION.children:
-    if isinstance(child, bpy.types.Collection):
-        piecesTypes.append(child.name)
-piecesTypes.sort()
-
-print("Found the following pieces types : {}".format(piecesTypes))
-
 # Instancing PiecesSet, which provides an interface for accessing with individual pieces in the same set (that is, pieces that share the same style)
 print("Instanciating pieces sets")
 allSetsSuccessfullyInstanced = True
@@ -112,7 +95,7 @@ for chessSet in GAME_SETS_COLLECTION.children:
     print(setPiecesTypes)
     setPiecesTypes.sort()
 
-    if setPiecesTypes != piecesTypes:
+    if setPiecesTypes != PIECES_TYPES:
         warnings.warn("Set '{}' doesn't have all registered pieces types, discarding".format(newBoard.sourceCollection.name))
         allSetsSuccessfullyInstanced = False
     else:
@@ -124,7 +107,7 @@ if not allSetsSuccessfullyInstanced:
 
 ## Generating scenarios
 print("Rendering...")
-imagesToRenderCount = 2000
+imagesToRenderCount = 1
 imagesGenerator = BoardConfigurationGenerator()
 plateauPos = Vector((-10,10,0))
 
