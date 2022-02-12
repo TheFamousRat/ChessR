@@ -7,3 +7,7 @@ Chess\ sets/*
 
 #The outputs
 data/*
+
+#Ignoring everything in the notebook folder but the one file
+notebook/*
+!notebook/*.ipynb
