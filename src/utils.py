@@ -1,4 +1,3 @@
-import warnings
 import bpy
 import re
 import numpy as np

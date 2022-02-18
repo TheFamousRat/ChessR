@@ -1,5 +1,3 @@
-from ctypes import util
-from math import pi
 import warnings
 import bpy
 import re
