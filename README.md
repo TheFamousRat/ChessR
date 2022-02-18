@@ -1,10 +1,14 @@
 # ChessR
 
+![Generated images of chess games](https://github.com/TheFamousRat/ChessR/blob/master/illustration.jpeg)
+
 ## Summary
 
 ChessR is a project to generate large synthetic datasets of images representing pictures of board games. Example of such a dataset, applied to chess boards, can be found here : https://www.kaggle.com/thefamousrat/synthetic-chess-board-images
 
 The application its been tested on for now was the generation of images of chess games, but the framework has been built to be game-agnostic, and could as such be used for any board game. The only strong constraint for now is that the board be rectangular with evenly-sized cells.
+
+Such synthetic datasets provide great training resources for neural network, essentially removing the hassling of collecting and annotating data. Classic CNN architectures trained on the linked chess datasets attained quickly accuracies of over 99% on test data. See example notebooks on the Kaggle page.
 
 ## Implementation
 
